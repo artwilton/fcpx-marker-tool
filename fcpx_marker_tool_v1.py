@@ -4,6 +4,7 @@ This script takes FCPX .xml files as an input and exports a .txt file containing
 
 import xml.etree.ElementTree as ET
 from timecode import Timecode
+import timecode
 
 def parse_xml(xml_file):
     tree = ET.parse(xml_file)
@@ -34,7 +35,7 @@ def split_and_remove_s(rational_time):
     return rational_time
 
 def format_frame_rate(frame_rate):
-
+    # Preps framerate for timecode module, ex: the string "1001/30000s" becomes a tuple (30000, 1001)
     frame_rate = split_and_remove_s(frame_rate)
     frame_rate = (frame_rate[1], frame_rate[0])
 
@@ -80,15 +81,34 @@ def grab_marker_start_time(clip, timeline_info, frame_rate):
 
 def frames_to_timecode(frame_count, frame_rate):
 
+    #adding 1 here because timecode module needs the amount of frames here, not a 0 based frame number
     frame_count += 1
     timecode_value = Timecode(frame_rate, frames=frame_count)
 
     return timecode_value
 
+def check_for_NDF(timeline_info):
+    # sometimes the framerate will be stored as something like "3003/90000s" instead of "1001/30000s"
+    # so this function checks to see if there is any possibility of a match for 29.97 or 59.94 no matter how the framerate is stored
+
+    frame_rate = format_frame_rate(timeline_info["frame_rate"])
+    timecode_format = timeline_info["timecode_format"]
+
+    check_5994 = (frame_rate[0] % 60000 + frame_rate[1] % 1001)
+    check_2997 = (frame_rate[0] % 30000 + frame_rate[1] % 1001)
+
+    if (check_5994 == 0) and (timecode_format == "NDF"):
+        frame_rate = (60, 1)
+    elif (check_2997 == 0) and (timecode_format == "NDF"):
+        frame_rate = (3000, 100)
+
+    return frame_rate
+
 def generate_output(clips_list, timeline_info):
 
     for clip in clips_list:
-        frame_rate = format_frame_rate(timeline_info["frame_rate"]) 
+        frame_rate = check_for_NDF(timeline_info)
+        # frame_rate = format_frame_rate(timeline_info["frame_rate"]) 
         marker_frame = grab_marker_start_time(clip, timeline_info, frame_rate)
         marker_timecode = frames_to_timecode(marker_frame, frame_rate)
         print(marker_timecode)
