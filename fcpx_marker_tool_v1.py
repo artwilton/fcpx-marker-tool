@@ -27,13 +27,13 @@ def get_timeline_info(xml_root):
 
     return timeline_info
 
+def split_and_remove_s(rational_time):
+    rational_time = rational_time.replace("s", "")
+    rational_time = tuple(map(int, rational_time.split("/")))
+
+    return rational_time
+
 def format_time_values(timeline_info):
-
-    def split_and_remove_s(rational_time):
-        rational_time_list = rational_time.replace("s", "")
-        rational_time_list = rational_time_list.split("/")
-
-        return rational_time_list
 
     start_frame = timeline_info["start_frame"]
 
@@ -43,10 +43,8 @@ def format_time_values(timeline_info):
         start_frame = split_and_remove_s(start_frame)
         timeline_info["start_frame"] = start_frame
 
-    # format frame_rate for timecode module, example: '1001/30000s' becomes '30000/1001'
-    frame_rate = timeline_info["frame_rate"]
-    frame_rate = split_and_remove_s(frame_rate)
-    timeline_info["frame_rate"] = (frame_rate[1] + "/" + frame_rate[0])
+    frame_rate_list = split_and_remove_s(timeline_info["frame_rate"])
+    timeline_info["frame_rate"] = frame_rate_list
 
 def grab_clips(xml_root):
     clips_list = []
@@ -71,7 +69,7 @@ def main():
     format_time_values(timeline_info)
     clips_list = grab_clips(parsed_xml)
 
-    print(timeline_info)
+    print(timeline_info, clips_list)
 
 if __name__ == "__main__":
     main()
