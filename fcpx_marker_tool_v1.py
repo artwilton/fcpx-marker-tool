@@ -33,18 +33,12 @@ def split_and_remove_s(rational_time):
 
     return rational_time
 
-def format_time_values(timeline_info):
+def format_frame_rate(frame_rate):
 
-    start_frame = timeline_info["start_frame"]
+    frame_rate = split_and_remove_s(frame_rate)
+    frame_rate = (frame_rate[1], frame_rate[0])
 
-    if start_frame == "0s":
-        timeline_info["start_frame"] = 0
-    else:
-        start_frame = split_and_remove_s(start_frame)
-        timeline_info["start_frame"] = start_frame
-
-    frame_rate_list = split_and_remove_s(timeline_info["frame_rate"])
-    timeline_info["frame_rate"] = frame_rate_list
+    return frame_rate
 
 def grab_clips(xml_root):
     clips_list = []
@@ -62,29 +56,49 @@ def grab_clips(xml_root):
 
     return clips_list
 
-def format_chapter_markers(clips_list):
+def get_number_of_frames(rational_time_value, frame_rate):
+
+    if rational_time_value == "0s" or rational_time_value is None:
+        return 0
+
+    rational_time_tuple = split_and_remove_s(rational_time_value)
+
+    number_of_frames = (rational_time_tuple[0] * frame_rate[0]) / (rational_time_tuple[1] * frame_rate[1])
+
+    return number_of_frames
+
+def grab_marker_start_time(clip, timeline_info, frame_rate):
+
+    timeline_starting_frame = get_number_of_frames(timeline_info["start_frame"], frame_rate)
+    clip_offset = get_number_of_frames(clip["clip_offset"], frame_rate)
+    chapter_start = get_number_of_frames(clip['chapter_start'], frame_rate)
+    clip_start = get_number_of_frames(clip['clip_start'], frame_rate)
+
+    chapter_marker_timeline_frame = int((chapter_start - clip_start) + clip_offset + timeline_starting_frame)
+
+    return chapter_marker_timeline_frame
+
+def frames_to_timecode(frame_count, frame_rate):
+
+    frame_count += 1
+    timecode_value = Timecode(frame_rate, frames=frame_count)
+
+    return timecode_value
+
+def generate_output(clips_list, timeline_info):
+
     for clip in clips_list:
-
-        clip_offset = clip['clip_offset']
-        clip_start = clip['clip_start']
-        chapter_start = clip['chapter_start']
-
-        if clip_offset == '0s':
-            clip['clip_offset'] = 0
-        else:
-            clip['clip_offset'] = split_and_remove_s(clip_offset)
-
-        clip['clip_start'] = split_and_remove_s(clip_start)
-        clip['chapter_start'] = split_and_remove_s(chapter_start)
+        frame_rate = format_frame_rate(timeline_info["frame_rate"]) 
+        marker_frame = grab_marker_start_time(clip, timeline_info, frame_rate)
+        marker_timecode = frames_to_timecode(marker_frame, frame_rate)
+        print(marker_timecode)
 
 def main():
     xml_file = input("Enter xml file path: ")
     parsed_xml = parse_xml(xml_file)
     timeline_info = get_timeline_info(parsed_xml)
-    format_time_values(timeline_info)
     clips_list = grab_clips(parsed_xml)
-    format_chapter_markers(clips_list)
-    print(clips_list)
+    generate_output(clips_list, timeline_info)
 
 if __name__ == "__main__":
     main()
