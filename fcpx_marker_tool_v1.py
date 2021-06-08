@@ -62,14 +62,29 @@ def grab_clips(xml_root):
 
     return clips_list
 
+def format_chapter_markers(clips_list):
+    for clip in clips_list:
+
+        clip_offset = clip['clip_offset']
+        clip_start = clip['clip_start']
+        chapter_start = clip['chapter_start']
+
+        if clip_offset == '0s':
+            clip['clip_offset'] = 0
+        else:
+            clip['clip_offset'] = split_and_remove_s(clip_offset)
+
+        clip['clip_start'] = split_and_remove_s(clip_start)
+        clip['chapter_start'] = split_and_remove_s(chapter_start)
+
 def main():
     xml_file = input("Enter xml file path: ")
     parsed_xml = parse_xml(xml_file)
     timeline_info = get_timeline_info(parsed_xml)
     format_time_values(timeline_info)
     clips_list = grab_clips(parsed_xml)
-
-    print(timeline_info, clips_list)
+    format_chapter_markers(clips_list)
+    print(clips_list)
 
 if __name__ == "__main__":
     main()
