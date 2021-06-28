@@ -4,7 +4,6 @@ This script takes FCPX .xml files as an input and exports a .txt file containing
 
 import xml.etree.ElementTree as ET
 from timecode import Timecode
-import timecode
 
 def parse_xml(xml_file):
     tree = ET.parse(xml_file)
@@ -108,7 +107,6 @@ def generate_output(clips_list, timeline_info):
 
     for clip in clips_list:
         frame_rate = check_for_NDF(timeline_info)
-        # frame_rate = format_frame_rate(timeline_info["frame_rate"]) 
         marker_frame = grab_marker_start_time(clip, timeline_info, frame_rate)
         marker_timecode = frames_to_timecode(marker_frame, frame_rate)
         print(marker_timecode)
