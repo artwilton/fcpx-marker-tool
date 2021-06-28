@@ -1,5 +1,5 @@
 """
-This script takes FCPX .xml files as an input and exports a .txt file containing chapter marker info
+This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
 import xml.etree.ElementTree as ET
