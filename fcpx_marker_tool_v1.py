@@ -48,9 +48,10 @@ def grab_clips(xml_root):
 
         clip_offset = clip.get("offset")
         clip_start = clip.get("start")
+        clip_duration = clip.get("duration")
         marker_list = clip.findall("chapter-marker")
 
-        clips_dict[clip_offset, clip_start] = marker_list
+        clips_dict[clip_offset, clip_start, clip_duration] = marker_list
 
     return clips_dict
 
@@ -74,6 +75,9 @@ def grab_marker_start_time(clip_offset, clip_start, marker_start, timeline_info,
     chapter_marker_timeline_frame = int((chapter_start_frames - clip_start_frames) + clip_offset_frames + timeline_starting_frame)
 
     return chapter_marker_timeline_frame
+
+def marker_timeline_check():
+    print("Checking marker")
 
 def frames_to_timecode(frame_count, frame_rate):
 
@@ -107,23 +111,19 @@ def generate_output(clips_dict, timeline_info):
     original_frame_rate = frame_rate_to_tuple(timeline_info["frame_rate"])
     formatted_frame_rate = check_for_ndf(timeline_info, original_frame_rate)
 
-    for clip_offset, clip_start in clips_dict:
-        clip_marker_list = clips_dict[clip_offset, clip_start]
+    for clip_offset, clip_start, clip_duration in clips_dict:
+        clip_marker_list = clips_dict[clip_offset, clip_start, clip_duration]
 
         for marker in clip_marker_list:
             marker_start = marker.get("start")
-            marker_name = marker.get("value")
-            # print(marker_name)
             marker_frame = grab_marker_start_time(clip_offset, clip_start, marker_start, timeline_info, original_frame_rate)
             marker_timecode = frames_to_timecode(marker_frame, formatted_frame_rate)
-            timeline_marker_list.append(str(f'{marker_timecode}, {marker_name}'))
-
-    print(*timeline_marker_list, sep='\n')
+            timeline_marker_list.append(str(marker_timecode))
 
     # sort list and only keep unique values, necessary due FCPX assigning duplicate chapter-markers to asset-clips in .fcpxml files
     timeline_marker_list = sorted(set(timeline_marker_list))
     
-    # print(*timeline_marker_list, sep='\n')
+    print(*timeline_marker_list, sep='\n')
 
 def main():
     xml_file = input("Enter xml file path: ")
