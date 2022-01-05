@@ -112,14 +112,18 @@ def generate_output(clips_dict, timeline_info):
 
         for marker in clip_marker_list:
             marker_start = marker.get("start")
+            marker_name = marker.get("value")
+            # print(marker_name)
             marker_frame = grab_marker_start_time(clip_offset, clip_start, marker_start, timeline_info, original_frame_rate)
             marker_timecode = frames_to_timecode(marker_frame, formatted_frame_rate)
-            timeline_marker_list.append(str(marker_timecode))
+            timeline_marker_list.append(str(f'{marker_timecode}, {marker_name}'))
+
+    print(*timeline_marker_list, sep='\n')
 
     # sort list and only keep unique values, necessary due FCPX assigning duplicate chapter-markers to asset-clips in .fcpxml files
     timeline_marker_list = sorted(set(timeline_marker_list))
     
-    print(*timeline_marker_list, sep='\n')
+    # print(*timeline_marker_list, sep='\n')
 
 def main():
     xml_file = input("Enter xml file path: ")
