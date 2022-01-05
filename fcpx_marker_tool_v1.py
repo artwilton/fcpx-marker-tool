@@ -76,8 +76,11 @@ def grab_marker_start_time(clip_offset, clip_start, marker_start, timeline_info,
 
     return chapter_marker_timeline_frame
 
-def marker_timeline_check():
-    print("Checking marker")
+def marker_timeline_check(marker_frame, clip_start_frame, clip_end_frame):
+    if (marker_frame >= clip_start_frame) and (marker_frame <= clip_end_frame):
+        return True
+    else:
+        return False
 
 def frames_to_timecode(frame_count, frame_rate):
 
