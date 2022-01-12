@@ -48,9 +48,10 @@ def grab_clips(xml_root):
 
         clip_offset = clip.get("offset")
         clip_start = clip.get("start")
+        clip_duration = clip.get("duration")
         marker_list = clip.findall("chapter-marker")
 
-        clips_dict[clip_offset, clip_start] = marker_list
+        clips_dict[clip_offset, clip_start, clip_duration] = marker_list
 
     return clips_dict
 
@@ -64,16 +65,24 @@ def get_number_of_frames(rational_time_value, frame_rate):
 
     return number_of_frames
 
-def grab_marker_start_time(clip_offset, clip_start, marker_start, timeline_info, frame_rate):
+def grab_marker_and_clip_frames(clip_offset, clip_start, clip_duration, marker_start, timeline_start, frame_rate):
 
-    timeline_starting_frame = get_number_of_frames(timeline_info["start_frame"], frame_rate)
-    clip_offset_frames = get_number_of_frames(clip_offset, frame_rate)
-    chapter_start_frames = get_number_of_frames(marker_start, frame_rate)
-    clip_start_frames = get_number_of_frames(clip_start, frame_rate)
+    timeline_starting_frame = get_number_of_frames(timeline_start, frame_rate)
+    clip_offset_frame = get_number_of_frames(clip_offset, frame_rate)
+    clip_duration_frames = get_number_of_frames(clip_duration, frame_rate)
+    marker_start_frame = get_number_of_frames(marker_start, frame_rate)
+    clip_start_frame = get_number_of_frames(clip_start, frame_rate)
 
-    chapter_marker_timeline_frame = int((chapter_start_frames - clip_start_frames) + clip_offset_frames + timeline_starting_frame)
+    marker_offset_frame = int((marker_start_frame - clip_start_frame) + clip_offset_frame + timeline_starting_frame)
+    clip_end_frame = int(clip_offset_frame + clip_duration_frames)
 
-    return chapter_marker_timeline_frame
+    return marker_offset_frame, clip_offset_frame, clip_end_frame
+
+def marker_timeline_check(marker_offset_frame, clip_offset_frame, clip_end_frame):
+    if (marker_offset_frame >= clip_offset_frame) and (marker_offset_frame <= clip_end_frame):
+        return True
+    else:
+        return False
 
 def frames_to_timecode(frame_count, frame_rate):
 
@@ -104,17 +113,26 @@ def generate_output(clips_dict, timeline_info):
 
     timeline_marker_list = []
     marker_timecode = ""
+    timeline_start_frame = timeline_info["start_frame"]
     original_frame_rate = frame_rate_to_tuple(timeline_info["frame_rate"])
     formatted_frame_rate = check_for_ndf(timeline_info, original_frame_rate)
 
-    for clip_offset, clip_start in clips_dict:
-        clip_marker_list = clips_dict[clip_offset, clip_start]
+    for clip_offset, clip_start, clip_duration in clips_dict:
+        clip_marker_list = clips_dict[clip_offset, clip_start, clip_duration]
 
         for marker in clip_marker_list:
             marker_start = marker.get("start")
-            marker_frame = grab_marker_start_time(clip_offset, clip_start, marker_start, timeline_info, original_frame_rate)
-            marker_timecode = frames_to_timecode(marker_frame, formatted_frame_rate)
-            timeline_marker_list.append(str(marker_timecode))
+            marker_offset_frame, clip_offset_frame, clip_end_frame = grab_marker_and_clip_frames(
+                clip_offset,
+                clip_start,
+                clip_duration,
+                marker_start,
+                timeline_start_frame,
+                original_frame_rate
+                )
+            if marker_timeline_check(marker_offset_frame, clip_offset_frame, clip_end_frame):
+                marker_timecode = frames_to_timecode(marker_offset_frame, formatted_frame_rate)
+                timeline_marker_list.append(str(marker_timecode))
 
     # sort list and only keep unique values, necessary due FCPX assigning duplicate chapter-markers to asset-clips in .fcpxml files
     timeline_marker_list = sorted(set(timeline_marker_list))
