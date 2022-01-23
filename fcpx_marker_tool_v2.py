@@ -2,6 +2,8 @@
 This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
+from email.policy import default
+from importlib import resources
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
@@ -102,32 +104,46 @@ class Marker:
 
 class XMLParser:
 
-    def __init__(self, xml_file):
-        self.xml_file = xml_file
-
-    def _get_xml_root(self):
-        tree = ET.parse(self.xml_file)
+    def _get_xml_root(self, xml_file):
+        tree = ET.parse(xml_file)
         xml_root = tree.getroot()
         return xml_root
 
+    def __init__(self, xml_file):
+        self.xml_file = xml_file
+        self._xml_root = self._get_xml_root(xml_file)
+
     # Library Parsing
     def _get_library_info(self):
-        xml_root = self._get_xml_root()
-        library = xml_root.find("./library")
+        library = self._xml_root.find("./library")
         file_path = library.get("location")
         return file_path
 
-    def _create_library(self, file_path):
+    def _create_library(self):
         file_path = self._get_library_info()
         return Library(file_path)
 
     # Resource Parsing
+    def _get_resource_info(self):
+        resources = self._xml_root.find("./resources")
+        return resources
+
+    def _create_resources(self, library):
+        resources = self._get_resource_info()
+
+        for resource in resources:
+            id = resource.get("id")
+            name = resource.get("name")
+            type = resource.tag
+            frame_rate = resource.get("frameDuration", default=None)
+
+            library.resources.append(Resource(id, name, type, frame_rate=frame_rate))
 
     # Timeline Parsing
 
     def parse_xml(self):
         library = self._create_library()
-        library.resources = 
+        self._create_resources(library)
         #call other functions to actually generate objects
         pass
 
