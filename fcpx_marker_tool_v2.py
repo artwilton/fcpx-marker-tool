@@ -8,13 +8,9 @@ from timecode import Timecode
 class Library:
 
     def __init__(self, file_path):
-        pass
-
-    def resources():
-        pass
-
-    def timelines():
-        pass
+        self.file_path = file_path
+        self.resources = []
+        self.timelines = []
 
 class Resource:
 
@@ -106,7 +102,33 @@ class Marker:
 
 class XMLParser:
 
-    def __init__(self):
+    def __init__(self, xml_file):
+        self.xml_file = xml_file
+
+    def _get_xml_root(self):
+        tree = ET.parse(self.xml_file)
+        xml_root = tree.getroot()
+        return xml_root
+
+    # Library Parsing
+    def _get_library_info(self):
+        xml_root = self._get_xml_root()
+        library = xml_root.find("./library")
+        file_path = library.get("location")
+        return file_path
+
+    def _create_library(self, file_path):
+        file_path = self._get_library_info()
+        return Library(file_path)
+
+    # Resource Parsing
+
+    # Timeline Parsing
+
+    def parse_xml(self):
+        library = self._create_library()
+        library.resources = 
+        #call other functions to actually generate objects
         pass
 
 class TimecodeHelpers:
