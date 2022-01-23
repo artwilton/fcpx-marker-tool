@@ -7,7 +7,13 @@ from timecode import Timecode
 
 class Library:
 
-    def __init__(self, name):
+    def __init__(self, file_path):
+        pass
+
+    def resources():
+        pass
+
+    def timelines():
         pass
 
 class Resource:
@@ -48,6 +54,10 @@ class Timeline:
         self.duration = duration
         self.timecode_format = timecode_format
         self.frame_rate = frame_rate
+        self.clips = []
+
+    def add_clip(self, name, offset, asset_id_ref, duration, start):
+        self.clips.append(Clip(name, offset, asset_id_ref, duration, start))
 
 class Clip:
 
@@ -57,6 +67,10 @@ class Clip:
         self.asset_id_ref = asset_id_ref
         self.duration = duration
         self.start = start
+        self.markers = []
+
+    def add_marker(self, start, value, type, completed=None):
+        self.markers.append(Marker(self, start, value, type, completed))
 
 class Marker:
 
