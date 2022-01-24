@@ -2,9 +2,13 @@
 This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
-from email.policy import default
 import xml.etree.ElementTree as ET
 from timecode import Timecode
+
+# will refactor this into a defaults module
+ALLOWED_RESOURCE_TYPES = ["format", "media", "asset"]
+ALLOWED_CLIP_TYPES = ["clip", "asset-clip", "sync-clip", "mc-clip", "ref-clip", "gap"]
+ALLOWED_MARKER_TYPES = ["marker", "to_do_marker", "chapter_marker"]
 
 class Library:
 
@@ -14,8 +18,6 @@ class Library:
         self.timelines = []
 
 class Resource:
-
-    allowed_types = ["format", "media", "asset"]
 
     def __init__(self, id, name, type, frame_rate=None):
         self.id = id
@@ -29,8 +31,8 @@ class Resource:
 
     @type.setter
     def type(self, value):
-        if value not in Resource.allowed_types:
-            raise ValueError(f"Resource type must be one of the following: {Resource.allowed_types}")
+        if value not in ALLOWED_RESOURCE_TYPES:
+            raise ValueError(f"Resource type must be one of the following: {ALLOWED_RESOURCE_TYPES}")
         self._type = value
 
     @property
@@ -55,17 +57,26 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, offset, duration, start, asset_id_ref=None):
+    def __init__(self, name, type, offset, duration, start, asset_id_ref=None):
         self.name = name
+        self.type = type
         self.offset = offset
         self.duration = duration
         self.start = start
         self.asset_id_ref = asset_id_ref
         self.markers = []
 
-class Marker:
+    @property
+    def type(self):
+        return self._type
 
-    allowed_types = ["marker", "to_do_marker", "chapter_marker"]
+    @type.setter
+    def type(self, value):
+        if value not in ALLOWED_CLIP_TYPES:
+            raise ValueError(f"Clip type must be one of the following: {ALLOWED_CLIP_TYPES}")
+        self._type = value
+
+class Marker:
 
     def __init__(self, start, value, type, completed=None):
         self.start = start
@@ -79,8 +90,8 @@ class Marker:
 
     @type.setter
     def type(self, value):
-        if value not in Marker.allowed_types:
-            raise ValueError(f"Marker type must be one of the following: {Marker.allowed_types}")
+        if value not in ALLOWED_MARKER_TYPES:
+            raise ValueError(f"Marker type must be one of the following: {ALLOWED_MARKER_TYPES}")
         self._type = value
 
     @property
@@ -153,22 +164,46 @@ class XMLParser:
             library.timelines.append(Timeline(name, start_frame, duration, timecode_format, frame_rate))
 
     # Clip Parsing
-    def _get_clip_elements(self):
-        pass
+    def _get_clip_elements(self, timeline_root):
+
+        #use list comprehension to grab all clip elements that can possibly have markers on them
+        #inlcuding clips that don't have Markers for scalability, for example if a user wants to see percentege of clips that have Markers, etc.
+        clips = [clip for clip in timeline_root.iter() if str(clip.tag) in ALLOWED_CLIP_TYPES]
+        
+        return clips
 
     def _create_clips(self, timelines):
 
-        for timeline in timelines:
+        # to avoid nested loops the solution will most likely be having a Timeline object be responsible for creating its own clips, and to follow that pattern with other classes.
 
-            _sequence = timeline.find("sequence")
- 
-            name = timeline.get("")
-            offset = timeline.get("")
-            duration = timeline.get("")
-            start = timeline.get("")
-            asset_id_ref = timeline.get("", default=None) #some asset types like gaps don't have a "ref" attribute
+        for timeline in timelines:
+            #for each timeline, only find clips that belong to it
+            timeline_root = self._xml_root.find(f".//project/[@name='{timeline.name}']")
+            clips = self._get_clip_elements(timeline_root)
+
+            for clip in clips:
+                name = clip.get("name")
+                type = clip.tag
+                offset = clip.get("offset")
+                duration = clip.get("duration")
+                start = clip.get("start")
+                asset_id_ref = clip.get("", default=None) #some asset types like gaps don't have a "ref" attribute, will add better handling for this in future versions
             
-            timeline.clips.append(Clip(name, offset, duration, start, asset_id_ref=asset_id_ref))
+                timeline.clips.append(Clip(name, type, offset, duration, start, asset_id_ref=asset_id_ref))
+
+        
+            
+
+            timeline_dict[timeline] = clips
+ 
+        for timeline_obj, clip in timeline_dict:
+
+            
+
+    # Marker Parsing
+
+    # def add_marker(self, start, value, type, completed=None):
+    #     self.markers.append(Marker(self, start, value, type, completed))
 
     def parse_xml(self):
         library = self._create_library()
