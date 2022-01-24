@@ -108,22 +108,22 @@ class XMLParser:
         self._xml_root = self._get_xml_root(xml_file)
 
     # Library Parsing
-    def _get_library_info(self):
+    def _get_library_element(self):
         library = self._xml_root.find("./library")
         file_path = library.get("location")
         return file_path
 
     def _create_library(self):
-        file_path = self._get_library_info()
+        file_path = self._get_library_element()
         return Library(file_path)
 
     # Resource Parsing
-    def _get_resource_info(self):
+    def _get_resource_elements(self):
         resources = self._xml_root.find("./resources")
         return resources
 
     def _create_resources(self, library):
-        resources = self._get_resource_info()
+        resources = self._get_resource_elements()
 
         for resource in resources:
             id = resource.get("id")
@@ -134,12 +134,12 @@ class XMLParser:
             library.resources.append(Resource(id, name, type, frame_rate=frame_rate))
 
     # Timeline Parsing
-    def _get_timeline_info(self):
+    def _get_timeline_elements(self):
         timelines = self._xml_root.findall("./project")
         return timelines
 
     def _create_timelines(self, library):
-        timelines = self._get_timeline_info()
+        timelines = self._get_timeline_elements()
 
         for timeline in timelines:
             _sequence = timeline.find("sequence")
@@ -153,7 +153,7 @@ class XMLParser:
             library.timelines.append(Timeline(name, start_frame, duration, timecode_format, frame_rate))
 
     # Clip Parsing
-    def _get_clip_info(self):
+    def _get_clip_elements(self):
         pass
 
     def _create_clips(self, timelines):
@@ -161,7 +161,7 @@ class XMLParser:
         for timeline in timelines:
 
             _sequence = timeline.find("sequence")
-
+ 
             name = timeline.get("")
             offset = timeline.get("")
             duration = timeline.get("")
