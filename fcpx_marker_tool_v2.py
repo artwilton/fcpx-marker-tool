@@ -2,6 +2,7 @@
 This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
+from email.policy import default
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
@@ -52,21 +53,15 @@ class Timeline:
         self.frame_rate = frame_rate
         self.clips = []
 
-    def add_clip(self, name, offset, asset_id_ref, duration, start):
-        self.clips.append(Clip(name, offset, asset_id_ref, duration, start))
-
 class Clip:
 
-    def __init__(self, name, offset, asset_id_ref, duration, start):
+    def __init__(self, name, offset, duration, start, asset_id_ref=None):
         self.name = name
         self.offset = offset
-        self.asset_id_ref = asset_id_ref
         self.duration = duration
         self.start = start
+        self.asset_id_ref = asset_id_ref
         self.markers = []
-
-    def add_marker(self, start, value, type, completed=None):
-        self.markers.append(Marker(self, start, value, type, completed))
 
 class Marker:
 
@@ -101,6 +96,7 @@ class Marker:
         self._completed = value
 
 class XMLParser:
+    # In future iterations creating an ABC for different Parsers might be beneficial here
 
     def _get_xml_root(self, xml_file):
         tree = ET.parse(xml_file)
@@ -156,11 +152,23 @@ class XMLParser:
             
             library.timelines.append(Timeline(name, start_frame, duration, timecode_format, frame_rate))
 
+    # Clip Parsing
     def _get_clip_info(self):
         pass
 
     def _create_clips(self, timelines):
-        pass
+
+        for timeline in timelines:
+
+            _sequence = timeline.find("sequence")
+
+            name = timeline.get("")
+            offset = timeline.get("")
+            duration = timeline.get("")
+            start = timeline.get("")
+            asset_id_ref = timeline.get("", default=None) #some asset types like gaps don't have a "ref" attribute
+            
+            timeline.clips.append(Clip(name, offset, duration, start, asset_id_ref=asset_id_ref))
 
     def parse_xml(self):
         library = self._create_library()
