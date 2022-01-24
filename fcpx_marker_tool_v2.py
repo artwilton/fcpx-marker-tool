@@ -2,8 +2,6 @@
 This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
-from email.policy import default
-from importlib import resources
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
@@ -140,10 +138,35 @@ class XMLParser:
             library.resources.append(Resource(id, name, type, frame_rate=frame_rate))
 
     # Timeline Parsing
+    def _get_timeline_info(self):
+        timelines = self._xml_root.findall("./project")
+        return timelines
+
+    def _create_timelines(self, library):
+        timelines = self._get_timeline_info()
+
+        for timeline in timelines:
+            _sequence = timeline.find("sequence")
+
+            name = timeline.get("name")
+            start_frame = _sequence.get("tcStart")
+            duration = _sequence.get("duration")
+            timecode_format = _sequence.get("tcFormat")
+            frame_rate = _sequence.get("frameDuration")
+            
+            library.timelines.append(Timeline(name, start_frame, duration, timecode_format, frame_rate))
+
+    def _get_clip_info(self):
+        pass
+
+    def _create_clips(self, timelines):
+        pass
 
     def parse_xml(self):
         library = self._create_library()
         self._create_resources(library)
+        self._create_timelines(library)
+        self._create_clips(library.timelines)
         #call other functions to actually generate objects
         pass
 
