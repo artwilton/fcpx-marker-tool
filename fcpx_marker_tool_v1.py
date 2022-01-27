@@ -132,9 +132,7 @@ def generate_output(clips_dict, timeline_info):
                 )
             if marker_timeline_check(marker_offset_frame, clip_offset_frame, clip_end_frame):
                 marker_timecode = frames_to_timecode(marker_offset_frame, formatted_frame_rate)
-                # timeline_marker_list.append(str(marker_timecode))
-                timeline_marker_list.append(f'{marker_timecode} - {marker.get("value")}')
-
+                timeline_marker_list.append(str(marker_timecode))
 
     # sort list and only keep unique values, necessary due FCPX assigning duplicate chapter-markers to asset-clips in .fcpxml files
     timeline_marker_list = sorted(set(timeline_marker_list))
