@@ -109,6 +109,16 @@ def check_for_ndf(timeline_info, frame_rate_tuple):
 
     return formatted_frame_rate
 
+def input_to_path(message):
+    input_path = input(message)
+
+    # Handle path being input with single quotes, common in something like VSCode when dragging and dropping
+    if input_path.startswith("'") and input_path.endswith("'"):
+        input_path = input_path[1:-1]
+
+    return input_path.strip()
+    
+
 def generate_output(clips_dict, timeline_info):
 
     timeline_marker_list = []
@@ -140,7 +150,7 @@ def generate_output(clips_dict, timeline_info):
     print(*timeline_marker_list, sep='\n')
 
 def main():
-    xml_file = input("Enter xml file path: ").strip()
+    xml_file = input_to_path("Enter xml file path: ")
     parsed_xml = parse_xml(xml_file)
     timeline_info = get_timeline_info(parsed_xml)
     clips_dict = grab_clips(parsed_xml)
