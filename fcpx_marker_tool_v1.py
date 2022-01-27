@@ -140,7 +140,7 @@ def generate_output(clips_dict, timeline_info):
     print(*timeline_marker_list, sep='\n')
 
 def main():
-    xml_file = input("Enter xml file path: ")
+    xml_file = input("Enter xml file path: ").strip()
     parsed_xml = parse_xml(xml_file)
     timeline_info = get_timeline_info(parsed_xml)
     clips_dict = grab_clips(parsed_xml)
