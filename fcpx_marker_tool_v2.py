@@ -2,6 +2,7 @@
 This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
+from email.policy import default
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
@@ -146,7 +147,8 @@ class XMLParser:
 
     # Timeline Parsing
     def _get_timeline_elements(self):
-        timelines = self._xml_root.findall("./project")
+        timelines = self._xml_root.findall(".//project")
+
         return timelines
 
     def _create_timelines(self, library):
@@ -174,12 +176,15 @@ class XMLParser:
 
     def _create_clips(self, timelines):
 
+        all_clips = []
+
         # to avoid nested loops the solution will most likely be having a Timeline object be responsible for creating its own clips, and to follow that pattern with other classes.
 
         for timeline in timelines:
             #for each timeline, only find clips that belong to it
             timeline_root = self._xml_root.find(f".//project/[@name='{timeline.name}']")
             clips = self._get_clip_elements(timeline_root)
+            all_clips.extend(clips)
 
             for clip in clips:
                 name = clip.get("name")
@@ -191,27 +196,32 @@ class XMLParser:
             
                 timeline.clips.append(Clip(name, type, offset, duration, start, asset_id_ref=asset_id_ref))
 
-        
-            
+        return all_clips
 
-            timeline_dict[timeline] = clips
- 
-        for timeline_obj, clip in timeline_dict:
+    def _get_marker_elements(self, clip):
+        markers = [marker for marker in clip.iter() if str(marker.tag).endswith('marker')]
 
-            
+        return markers
 
-    # Marker Parsing
+    def _create_markers(self, all_clips, library):
+        for clip in all_clips:
+            markers = self._get_marker_elements(clip)
 
-    # def add_marker(self, start, value, type, completed=None):
-    #     self.markers.append(Marker(self, start, value, type, completed))
+            # again need to change design pattern here to avoid nested loops
+            for marker in markers:
+                start = marker.get("start")
+                value = marker.get("value")
+                type = marker.tag
+                completed = marker.get("completed", default=None)
+                clip.markers.append(Marker(self, start, value, type, completed))
 
     def parse_xml(self):
         library = self._create_library()
         self._create_resources(library)
         self._create_timelines(library)
-        self._create_clips(library.timelines)
-        #call other functions to actually generate objects
-        pass
+        all_clips = self._create_clips(library.timelines)
+        self._create_markers(all_clips, library)
+        print(len(all_clips))
 
 class TimecodeHelpers:
 
@@ -224,7 +234,9 @@ class Interface:
         pass
 
 def main():
-    print("main")
+    xml_file = input("Enter xml file path: ").strip()
+    xml_parser = XMLParser(xml_file)
+    xml_parser.parse_xml()
 
-if __name__ == "main":
+if __name__ == "__main__":
     main()
