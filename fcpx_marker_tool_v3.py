@@ -3,7 +3,7 @@ from timecode import Timecode
 
 #This refactor will be built with the idea of making code more scalable, with future ability to import xml files from more than just FCPX
 
-class TimecodeInfo():
+class TimecodeInfo:
 
     def __init__(self, id, frame_rate, start, duration, non_drop_frame):
         self.id = id # can be anything useful, example is "Format id" for FCPX
@@ -40,6 +40,16 @@ class TimecodeInfo():
             return 'NDF'
         else:
             return 'DF'
+
+class Resource:
+
+    # allows shared characteristics between multiple types of xml imports
+
+    def __init__(self, id, name, path, timecode_info):
+        self.id = id
+        self.name = name
+        self.path = path # for anything that's not a file like compound clips, this can be labeled as something like "internal"
+        self.timecode_info = timecode_info # TimecodeInfo class object
 
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
