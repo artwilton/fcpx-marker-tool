@@ -12,7 +12,7 @@ class TimecodeInfo():
         self.start = start # int representing start frame
         self.duration = duration # int for total amount of frames
         self.non_drop_frame = non_drop_frame # Boolean, True for NDF and False for DF
-        self._timecode = Timecode(frame_rate, (start + 1), non_drop_frame)
+        self._timecode = Timecode(frame_rate, frames=(start + 1), force_non_drop_frame=non_drop_frame)
     
     @property
     def frame_rate_number(self):
@@ -20,7 +20,7 @@ class TimecodeInfo():
 
     @property
     def frame_rate_tuple(self):
-        # method that will return a tuple version regardless of how TimecodeInfo class is instantiated
+        # method that will return a rational number tuple version regardless of how TimecodeInfo class is instantiated
         pass
 
     @property
@@ -29,7 +29,8 @@ class TimecodeInfo():
 
     @property
     def fractional_timecode(self):
-        fractional_output = str(self._timecode.set_fractional(True))
+        self._timecode.set_fractional(True)
+        fractional_output = str(self._timecode)
         self._timecode.set_fractional(False) #unset fractional timecode after grabbing output
         return fractional_output
 
@@ -39,3 +40,10 @@ class TimecodeInfo():
             return 'NDF'
         else:
             return 'DF'
+
+def main():
+    tc = TimecodeInfo("12", (30000, 1001),10,10,True )
+    print(tc.standard_timecode, tc.id, tc.frame_rate_number)
+
+if __name__ == "__main__":
+    main()
