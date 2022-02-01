@@ -2,7 +2,6 @@
 This script takes FCPX .xml files as an input and prints chapter marker info
 """
 
-from email.policy import default
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
