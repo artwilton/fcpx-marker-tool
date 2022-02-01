@@ -22,3 +22,10 @@ class TimecodeInfo():
     def frame_rate_tuple(self):
         # method that will return a tuple version regardless of how TimecodeInfo class is instantiated
         pass
+
+    @property
+    def format(self):
+        if self.non_drop_frame:
+            return 'NDF'
+        else:
+            return 'DF'
