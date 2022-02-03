@@ -51,6 +51,13 @@ class Resource:
         self.path = path # for anything that's not a file like compound clips, this can be labeled as something like "internal"
         self.timecode_info = timecode_info # TimecodeInfo class object
 
+class Timeline:
+
+    def __init__(self, name, timecode_info):
+        self.name = name
+        self.timecode_info = timecode_info
+        self.clips = []
+
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
     print(tc.standard_timecode, tc.id, tc.frame_rate_number)
