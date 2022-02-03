@@ -61,6 +61,17 @@ class Timeline:
     def add_clip(self, clip):
         self.clips.append(clip)
 
+class Clip:
+
+    def __init__(self, name, offset, timecode_info):
+        self.name = name
+        self.offset = offset
+        self.timecode_info = timecode_info
+        self.markers = []
+
+    def add_marker(self, marker):
+        self.markers.append(marker)
+
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
     print(tc.standard_timecode, tc.id, tc.frame_rate_number)
