@@ -72,6 +72,20 @@ class Clip:
     def add_marker(self, marker):
         self.markers.append(marker)
 
+class ProjectFile:
+
+    def __init__(self, name, path):
+        self.name = name
+        self.path = path
+        self.resources = []
+        self.timelines = []
+
+    def add_resource(self, resource):
+        self.resources.append(resource)  
+
+    def add_timeline(self, timeline):
+        self.timelines.append(timeline)  
+
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
     print(tc.standard_timecode, tc.id, tc.frame_rate_number)
