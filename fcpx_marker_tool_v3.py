@@ -58,6 +58,9 @@ class Timeline:
         self.timecode_info = timecode_info
         self.clips = []
 
+    def add_clip(self, clip):
+        self.clips.append(clip)
+
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
     print(tc.standard_timecode, tc.id, tc.frame_rate_number)
