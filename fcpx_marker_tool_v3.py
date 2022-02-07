@@ -1,3 +1,4 @@
+from pathlib import Path
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
@@ -86,20 +87,37 @@ class Clip:
     def add_marker(self, marker):
         self.markers.append(marker)
 
-class UserInput:
+class XMLParser:
 
-    def __init__(self, message):
-        self.message = message
+    def __init__(self, xml_file):
+        self.xml_file = xml_file
 
-    @property
-    def message(self):
-        return self._message
+    @classmethod
+    def get_input(cls, message):
+        xml_file = cls._input_to_path(message)
+        return cls(xml_file)
 
-    @message.setter
-    def message(self, value):
-        if not isinstance(value, str):
-            value = str(value)
-        self._message = value
+    def _input_to_path(cls, message):
+        while True:
+            # Grab input, handle path being wrapped in single quotes
+            user_input = input(message)
+            if user_input.startswith("'") and user_input.endswith("'"):
+                user_input = user_input[1:-1]
+            # create a Path object from input, remove trailing white spaces
+            input_path = Path(user_input.strip())
+            #validate file exists
+            if not input_path.is_file():
+                print("Please enter valid file path.")
+                continue
+            else:
+                break
+           
+        return input_path
+    
+    def _get_xml_root(self):
+        tree = ET.parse(self.xml_file)
+        xml_root = tree.getroot()
+        return xml_root
 
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
