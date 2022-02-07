@@ -87,7 +87,22 @@ class Clip:
     def add_marker(self, marker):
         self.markers.append(marker)
 
+class FCPXParser:
+
+    def __init__(self):
+        pass
+
+class FCP7Parser:
+
+    def __init__(self):
+        pass
+
 class XMLParser:
+
+    parser_types = {
+        "fcpxml": FCPXParser,
+        "xmeml": FCP7Parser
+    }
 
     def __init__(self, xml_file):
         self.xml_file = xml_file
