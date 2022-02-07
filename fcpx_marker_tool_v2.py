@@ -78,8 +78,9 @@ class Clip:
 
 class Marker:
 
-    def __init__(self, start, value, type, completed=None):
+    def __init__(self, start, duration, value, type, completed=None):
         self.start = start
+        self.duration = duration
         self.value = value
         self.type = type
         self.completed = completed

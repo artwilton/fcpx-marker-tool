@@ -89,13 +89,15 @@ class Clip:
 
 class FCPXParser:
 
-    def __init__(self):
-        pass
+    def __init__(self, xml_root):
+        self.xml_root = xml_root
+        print("FCPX Parser")
 
 class FCP7Parser:
 
-    def __init__(self):
-        pass
+    def __init__(self, xml_root):
+        self.xml_root = xml_root
+        print("FCP7 Parser")
 
 class XMLParser:
 
@@ -112,6 +114,7 @@ class XMLParser:
         xml_file = cls._input_to_path(message)
         return cls(xml_file)
 
+    @classmethod
     def _input_to_path(cls, message):
         while True:
             # Grab input, handle path being wrapped in single quotes
@@ -134,9 +137,27 @@ class XMLParser:
         xml_root = tree.getroot()
         return xml_root
 
+    def _choose_parser(self, xml_root):
+        xml_type = xml_root.tag
+
+        if xml_type not in self.parser_types:
+            raise ValueError(f"XML type '{xml_type}' not recognized")
+        parser_type = self.parser_types[xml_type]
+
+        return parser_type
+
+    def parse_xml(self):
+        xml_root = self._get_xml_root()
+        parser_type = self._choose_parser(xml_root)
+        parsed_xml = parser_type(xml_root)
+        return parsed_xml
+
 def main():
-    tc = TimecodeInfo("12", (30000, 1001),10,10,True )
-    print(tc.standard_timecode, tc.id, tc.frame_rate_number)
+    xml_parser = XMLParser.get_input("Enter file: ")
+    parsed_xml = xml_parser.parse_xml()
+    # tc = TimecodeInfo("12", (30000, 1001),10,10,True )
+    # print(tc.standard_timecode, tc.id, tc.frame_rate_number)
+
 
 if __name__ == "__main__":
     main()
