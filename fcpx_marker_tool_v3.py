@@ -5,7 +5,7 @@ from timecode import Timecode
 
 class TimecodeInfo:
 
-    def __init__(self, id, frame_rate, start, duration, non_drop_frame):
+    def __init__(self, id, frame_rate, start, duration, non_drop_frame=False):
         self.id = id # can be anything useful, example is "Format id" for FCPX
         self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
         # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps. 
@@ -85,6 +85,21 @@ class Clip:
 
     def add_marker(self, marker):
         self.markers.append(marker)
+
+class UserInput:
+
+    def __init__(self, message):
+        self.message = message
+
+    @property
+    def message(self):
+        return self._message
+
+    @message.setter
+    def message(self, value):
+        if not isinstance(value, str):
+            value = str(value)
+        self._message = value
 
 def main():
     tc = TimecodeInfo("12", (30000, 1001),10,10,True )
