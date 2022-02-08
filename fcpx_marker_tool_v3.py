@@ -126,18 +126,37 @@ class FCPXParser:
         return resource
 
     def _handle_asset_resource(self, resource):
-         id = resource.get('id')
-         name = resource.get('name')
-         start = resource.get('start')
-         duration = resource.get('duration')
-         format = resource.get('format')
-         path = resource.get(f"./format/[@id='{format}']")
-         non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
+        id = resource.get('id')
+        name = resource.get('name')
+        start = resource.get('start')
+        duration = resource.get('duration')
+        format = resource.get('format')
+        path = resource.get(f"./format/[@id='{format}']")
+        non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
          
-         return id, name, path, start, duration, format, non_drop_frame
+        return id, name, path, start, duration, format, non_drop_frame
 
     def _handle_media_resource(self, resource):
-        return id, name, path, start, duration, format
+        id = resource.get('id')
+        name = resource.get('name')
+        path = 'N/A'
+        start, duration, format, non_drop_frame = self._filter_media_child_element(resource)   
+
+        return id, name, path, start, duration, format, non_drop_frame
+
+    def _filter_media_child_element(self, resource):
+        child_element = resource.find('./')
+        start = child_element.get('tcStart')
+        format = child_element.get('format')
+        non_drop_frame = child_element.get('tcFormat')
+
+        if child_element.tag == 'multicam':
+            duration = 0 # Multicam duration is not listed, can create logic later to determine this if necessary
+        else:
+            duration = child_element.get('')
+
+        return start, duration, format, non_drop_frame
+            
 
     def _create_resource_timecode_info(self, resource, format, start, duration, non_drop_frame):
         format_element = resource.find(f"./resources/format/[@id='{format}']")
@@ -150,7 +169,9 @@ class FCPXParser:
 
     def parse_xml(self):
         project_file = self._create_project_file()
-        resources = self._create_project_resources(project_file)
+        self._create_project_resources(project_file)
+
+        resources = project_file.resources
         print(resources)
 
 class FCP7Parser:
