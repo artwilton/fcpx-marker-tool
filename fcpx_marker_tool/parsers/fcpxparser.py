@@ -1,7 +1,8 @@
 from pathlib import Path
-import xml.etree.ElementTree as ET
-from timecode import Timecode
-from . import helpers
+from common import helpers
+from common.projectclasses import ProjectFile, Resource, Timeline, Clip
+from common.timecodeinfo import TimecodeInfo
+
 
 class FCPXParser:
 
@@ -75,6 +76,7 @@ class FCPXParser:
         format_element = resource.find(f"./resources/format/[@id='{format}']")
         format_id = format_element.get('id')
         frame_rate = format_element.get('frameDuration')
+        duration = helpers.frame_rate_to_tuple(duration)
 
         timecode_info = TimecodeInfo(format_id, frame_rate, start, duration, non_drop_frame=non_drop_frame)
 

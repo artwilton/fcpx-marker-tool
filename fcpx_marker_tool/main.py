@@ -1,3 +1,5 @@
+from parsers.xmlparser import XMLParser
+
 def main():
     xml_parser = XMLParser.get_input("Enter file: ")
     parser = xml_parser.create_parser()
