@@ -28,9 +28,10 @@ class FCPXParser:
             print("'resources' element not found")
 
         for resource in resources:
-            id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
-            timecode_info = self._create_resource_timecode_info(resources, format, start, duration, non_drop_frame)
-            project_file.add_resource(Resource(id, name, path, timecode_info))
+            if not resource.tag == 'format':
+                id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
+                timecode_info = self._create_resource_timecode_info(resources, format, start, duration, non_drop_frame)
+                project_file.add_resource(Resource(id, name, path, timecode_info))
 
     def _filter_resource_type(self, resource):
         if resource.tag == 'asset':
@@ -68,15 +69,22 @@ class FCPXParser:
         if child_element.tag == 'multicam':
             duration = 0 # Multicam duration is not listed, can create logic later to determine this if necessary
         else:
-            duration = child_element.get('')
+            duration = child_element.get('duration')
 
         return start, duration, format, non_drop_frame
             
     def _create_resource_timecode_info(self, resource, format, start, duration, non_drop_frame):
-        format_element = resource.find(f"./resources/format/[@id='{format}']")
+        format_element = resource.find(f"./format/[@id='{format}']")
+        print(format_element)
         format_id = format_element.get('id')
         frame_rate = format_element.get('frameDuration')
-        duration = helpers.frame_rate_to_tuple(duration)
+        frame_rate = helpers.frame_rate_to_tuple(frame_rate)
+        # need to add helper functions for checking if start exists, and if not default it to 0
+        # there's also no guarantee that start will be a whole number and not rational
+        start = int(start.replace("s", ""))
+        # add a function to make the duration a whole number instead of a rational number 
+        if type(duration) is not int:
+            duration = duration.replace("s", "")
 
         timecode_info = TimecodeInfo(format_id, frame_rate, start, duration, non_drop_frame=non_drop_frame)
 

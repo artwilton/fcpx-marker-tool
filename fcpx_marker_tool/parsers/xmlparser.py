@@ -1,8 +1,9 @@
+import imp
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from . import fcpxparser as FCPXParser
-from . import fcp7parser as FCP7Parser
+from parsers.fcpxparser import FCPXParser
+from parsers.fcp7parser import FCP7Parser
 
 class XMLParser:
 
