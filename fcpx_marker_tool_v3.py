@@ -95,14 +95,59 @@ class FCPXParser:
         self.xml_root = xml_root
         # print("FCPX Parser", xml_root.tag)
 
-    def _create_resources(self):
-        resources = self.xml_root.find('resources')
+    def _create_project_file(self):
+        try:
+            library = self.xml_root.find('library')
+        except:
+            print("'library' element not found")
 
-        for resource in resources.iter():
-            print(resource)
+        path = library.get('location')
+        name = Path(path).name
+        project_file = ProjectFile(name, path)
+
+        return project_file
+
+    def _create_resource_list(self, project_file):
+        try:
+            resources = self.xml_root.find('resources')
+        except:
+            print("'resources' element not found")
+
+        for resource in resources:
+            id, name, path, start, duration, format = self._filter_resource_type(resource)
+            timecode_info = self._create_resource_timecode_info(format, start, duration)
+            project_file.add_resource(Resource(id, name, path, timecode_info))
+
+    def _filter_resource_type(self, resource):
+        if resource.tag == 'asset':
+            resource = self._handle_asset_resource(resource)
+        elif resource.tag == 'media':
+            resource = self._handle_media_resource(resource)
+
+        return resource
+
+    def _handle_asset_resource(self, resource):
+         id = resource.get('id')
+         name = resource.get('name')
+         path = resource.get(f"./format/[@id='{format}']")
+         start = resource.get('start')
+         duration = resource.get('duration')
+         format = resource.get('format')
+         
+         return id, name, path, start, duration, format
+
+
+    def _handle_media_resource(self, resource):
+        return id, name, path, start, duration, format
+
+    def _create_resource_timecode_info(self, resource):
+        format_element = resource.find(f"./format/[@id='{format}']")
+        pass
 
     def parse_xml(self):
-        resources = self._create_resources()
+        project_file = self._create_project_file()
+        resources = self._create_resource_list(project_file)
+        print(resources)
 
 class FCP7Parser:
 
