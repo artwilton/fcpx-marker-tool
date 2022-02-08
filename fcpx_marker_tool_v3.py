@@ -93,7 +93,6 @@ class FCPXParser:
 
     def __init__(self, xml_root):
         self.xml_root = xml_root
-        # print("FCPX Parser", xml_root.tag)
 
     def _create_project_file(self):
         try:
@@ -107,15 +106,15 @@ class FCPXParser:
 
         return project_file
 
-    def _create_resource_list(self, project_file):
+    def _create_project_resources(self, project_file):
         try:
             resources = self.xml_root.find('resources')
         except:
             print("'resources' element not found")
 
         for resource in resources:
-            id, name, path, start, duration, format = self._filter_resource_type(resource)
-            timecode_info = self._create_resource_timecode_info(format, start, duration)
+            id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
+            timecode_info = self._create_resource_timecode_info(resources, format, start, duration, non_drop_frame)
             project_file.add_resource(Resource(id, name, path, timecode_info))
 
     def _filter_resource_type(self, resource):
@@ -129,24 +128,29 @@ class FCPXParser:
     def _handle_asset_resource(self, resource):
          id = resource.get('id')
          name = resource.get('name')
-         path = resource.get(f"./format/[@id='{format}']")
          start = resource.get('start')
          duration = resource.get('duration')
          format = resource.get('format')
+         path = resource.get(f"./format/[@id='{format}']")
+         non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
          
-         return id, name, path, start, duration, format
-
+         return id, name, path, start, duration, format, non_drop_frame
 
     def _handle_media_resource(self, resource):
         return id, name, path, start, duration, format
 
-    def _create_resource_timecode_info(self, resource):
-        format_element = resource.find(f"./format/[@id='{format}']")
-        pass
+    def _create_resource_timecode_info(self, resource, format, start, duration, non_drop_frame):
+        format_element = resource.find(f"./resources/format/[@id='{format}']")
+        format_id = format_element.get('id')
+        frame_rate = format_element.get('frameDuration')
+
+        timecode_info = TimecodeInfo(format_id, frame_rate, start, duration, non_drop_frame=non_drop_frame)
+
+        return timecode_info
 
     def parse_xml(self):
         project_file = self._create_project_file()
-        resources = self._create_resource_list(project_file)
+        resources = self._create_project_resources(project_file)
         print(resources)
 
 class FCP7Parser:
