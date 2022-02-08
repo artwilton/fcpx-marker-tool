@@ -157,7 +157,6 @@ class FCPXParser:
 
         return start, duration, format, non_drop_frame
             
-
     def _create_resource_timecode_info(self, resource, format, start, duration, non_drop_frame):
         format_element = resource.find(f"./resources/format/[@id='{format}']")
         format_id = format_element.get('id')
@@ -166,6 +165,13 @@ class FCPXParser:
         timecode_info = TimecodeInfo(format_id, frame_rate, start, duration, non_drop_frame=non_drop_frame)
 
         return timecode_info
+
+    # Might move this to generic helper function list if needed
+    def _split_and_remove_s(rational_time_string):
+        rational_time_string = rational_time_string.replace("s", "")
+        rational_time_tuple = tuple(map(int, rational_time_string.split("/")))
+
+        return rational_time_tuple
 
     def parse_xml(self):
         project_file = self._create_project_file()
