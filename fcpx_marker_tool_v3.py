@@ -1,4 +1,6 @@
+from importlib import resources
 from pathlib import Path
+import resource
 import xml.etree.ElementTree as ET
 from timecode import Timecode
 
@@ -91,13 +93,22 @@ class FCPXParser:
 
     def __init__(self, xml_root):
         self.xml_root = xml_root
-        print("FCPX Parser", xml_root.tag)
+        # print("FCPX Parser", xml_root.tag)
+
+    def _create_resources(self):
+        resources = self.xml_root.find('resources')
+
+        for resource in resources.iter():
+            print(resource)
+
+    def parse_xml(self):
+        resources = self._create_resources()
 
 class FCP7Parser:
 
     def __init__(self, xml_root):
         self.xml_root = xml_root
-        print("FCP7 Parser", xml_root.tag)
+        print("FCP7 support will be added in a future version.")
 
 class XMLParser:
 
@@ -162,15 +173,16 @@ class XMLParser:
 
         return xml_file
 
-    def parse_xml(self):
+    def create_parser(self):
         xml_root = self._get_xml_root()
         parser_type = self._choose_parser(xml_root)
-        parsed_xml = parser_type(xml_root)
-        return parsed_xml
+        parser = parser_type(xml_root)
+        return parser
 
 def main():
     xml_parser = XMLParser.get_input("Enter file: ")
-    parsed_xml = xml_parser.parse_xml()
+    parser = xml_parser.create_parser()
+    parsed_xml = parser.parse_xml()
     # tc = TimecodeInfo("12", (30000, 1001),10,10,True )
     # print(tc.standard_timecode, tc.id, tc.frame_rate_number)
 
