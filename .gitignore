@@ -2,8 +2,9 @@ Notes*
 tests_and_example_files
 .vscode
 
-# Python Virtual Environment
+# Python
 venv
+__pycache__
 
 # MACOS
 
