@@ -1,6 +1,5 @@
 def split_and_remove_s(rational_time_string):
     rational_time_string = rational_time_string.replace("s", "")
-
     #Handles rational time represented as fractions or whole numbers, FCPX rounds down rational numbers when possible
     if "/" in rational_time_string:
         rational_time_tuple = tuple(map(int, rational_time_string.split("/")))

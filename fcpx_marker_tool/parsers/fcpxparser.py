@@ -3,12 +3,12 @@ from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip
 from common.timecodeinfo import TimecodeInfo
 
-
 class FCPXParser:
 
     def __init__(self, xml_root):
         self.xml_root = xml_root
 
+    # PROJECT FILE
     def _create_project_file(self):
         try:
             library = self.xml_root.find('library')
@@ -21,7 +21,8 @@ class FCPXParser:
 
         return project_file
 
-    def _create_project_resources(self, project_file):
+    # RESOURCES
+    def _create_resources(self, project_file):
         try:
             resources = self.xml_root.find('resources')
         except:
@@ -85,10 +86,16 @@ class FCPXParser:
 
         return timecode_info
 
+    # TIMELINES
+
+    def _create_timelines(self):
+        print("creating timlines")
+
     def parse_xml(self):
         project_file = self._create_project_file()
-        self._create_project_resources(project_file)
+        self._create_resources(project_file)
+        self._create_timelines(project_file)
 
         resources = project_file.resources
         for resource in resources:
-            print(resource.name)
+            print(resource.timecode_info.standard_timecode)

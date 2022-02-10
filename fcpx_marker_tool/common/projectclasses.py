@@ -33,11 +33,16 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, offset, timecode_info):
+    def __init__(self, name, type, timecode_info):
         self.name = name
-        self.offset = offset
+        self.type = type
         self.timecode_info = timecode_info
         self.markers = []
 
     def add_marker(self, marker):
         self.markers.append(marker)
+
+class Marker:
+
+    def __init__(self):
+        pass
