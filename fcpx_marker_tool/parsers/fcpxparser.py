@@ -43,29 +43,22 @@ class FCPXParser:
         return resource
 
     def _handle_asset_resource(self, resource):
-        id = resource.get('id')
-        name = resource.get('name')
-        start = resource.get('start')
-        duration = resource.get('duration')
-        format = resource.get('format')
+        id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
         path = resource.find('./media-rep').get('src')
         non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
          
         return id, name, path, start, duration, format, non_drop_frame
 
     def _handle_media_resource(self, resource):
-        id = resource.get('id')
-        name = resource.get('name')
+        id, name = helpers.get_attributes(resource, 'id', 'name')
         path = 'N/A'
-        start, duration, format, non_drop_frame = self._filter_media_child_element(resource)   
+        start, duration, format, non_drop_frame = self._filter_media_child_element(resource)
 
         return id, name, path, start, duration, format, non_drop_frame
 
     def _filter_media_child_element(self, resource):
         child_element = resource.find('./')
-        start = child_element.get('tcStart')
-        format = child_element.get('format')
-        non_drop_frame = child_element.get('tcFormat')
+        start, format, non_drop_frame = helpers.get_attributes(child_element, 'tcStart', 'format', 'tcFormat')
 
         if child_element.tag == 'multicam':
             duration = 0 # Multicam duration is not listed, can create logic later to determine this if necessary
@@ -76,8 +69,7 @@ class FCPXParser:
             
     def _create_timecode_info(self, format, start, duration, non_drop_frame):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
-        format_id = format_element.get('id')
-        frame_rate = format_element.get('frameDuration')
+        format_id, frame_rate = helpers.get_attributes(format_element, 'id', 'frameDuration')
         frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
@@ -87,7 +79,6 @@ class FCPXParser:
         return timecode_info
 
     # TIMELINES
-
     def _create_timelines(self, project_file):
         try:
             timelines = self.xml_root.findall('./library/event/project')
@@ -97,7 +88,7 @@ class FCPXParser:
         for timeline in timelines:
             name = timeline.get('name')
             sequence = timeline.find('./sequence')
-            start, duration, format, non_drop_frame = helpers.get_multiple_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
+            start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
             timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
             project_file.add_timeline(Timeline(name, timecode_info))
 
