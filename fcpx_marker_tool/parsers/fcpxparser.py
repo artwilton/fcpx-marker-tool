@@ -31,7 +31,7 @@ class FCPXParser:
         for resource in resources:
             if not resource.tag == 'format':
                 id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
-                timecode_info = self._create_resource_timecode_info(resources, format, start, duration, non_drop_frame)
+                timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
                 project_file.add_resource(Resource(id, name, path, timecode_info))
 
     def _filter_resource_type(self, resource):
@@ -48,7 +48,7 @@ class FCPXParser:
         start = resource.get('start')
         duration = resource.get('duration')
         format = resource.get('format')
-        path = resource.get(f"./format/[@id='{format}']")
+        path = resource.find('./media-rep').get('src')
         non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
          
         return id, name, path, start, duration, format, non_drop_frame
@@ -74,8 +74,8 @@ class FCPXParser:
 
         return start, duration, format, non_drop_frame
             
-    def _create_resource_timecode_info(self, resource, format, start, duration, non_drop_frame):
-        format_element = resource.find(f"./format/[@id='{format}']")
+    def _create_timecode_info(self, format, start, duration, non_drop_frame):
+        format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
         format_id = format_element.get('id')
         frame_rate = format_element.get('frameDuration')
         frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
@@ -88,14 +88,28 @@ class FCPXParser:
 
     # TIMELINES
 
-    def _create_timelines(self):
-        print("creating timlines")
+    def _create_timelines(self, project_file):
+        try:
+            timelines = self.xml_root.findall('./library/event/project')
+        except:
+            print("'project' element not found")
+
+        for timeline in timelines:
+            name = timeline.get('name')
+            sequence = timeline.find('./sequence')
+            start, duration, format, non_drop_frame = helpers.get_multiple_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
+            timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
+            project_file.add_timeline(Timeline(name, timecode_info))
+
+        return timelines
 
     def parse_xml(self):
         project_file = self._create_project_file()
         self._create_resources(project_file)
-        self._create_timelines(project_file)
+        timelines = self._create_timelines(project_file)
 
-        resources = project_file.resources
-        for resource in resources:
-            print(resource.timecode_info.standard_timecode)
+        print(timelines)
+
+        # resources = project_file.resources
+        # for resource in resources:
+        #     print(resource.timecode_info.standard_timecode)
