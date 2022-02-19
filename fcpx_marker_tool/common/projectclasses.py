@@ -21,6 +21,19 @@ class Resource:
         self.path = path # for anything that's not a file like compound clips, this can be labeled as something like "internal"
         self.timecode_info = timecode_info # TimecodeInfo class object
 
+class Container:
+    """Used for creating a simple directory structure. Container children nodes can be another container, timeline, or clip."""
+
+    def __init__(self, name, children=None):
+        self.name = name
+        self.children = []
+        if children is not None:
+            for child in children:
+                self.add_child(child)
+
+    def add_child(self, child):
+        self.children.append(child)
+
 class Timeline:
 
     def __init__(self, name, timecode_info):
