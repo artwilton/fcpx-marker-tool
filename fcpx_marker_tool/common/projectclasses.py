@@ -34,6 +34,22 @@ class Container:
     def add_child(self, child):
         self.children.append(child)
 
+    def print_tree(self):
+        self._recursive_container(self)
+
+    @classmethod
+    def _recursive_container(cls, container, level=1):
+        print(f"{'---' * level}{container.name}")
+
+        sorted_container = sorted(container.children, key=lambda child: child.name if child.name else child)
+
+        for child in sorted_container:
+            if isinstance(child, cls):
+                level += 1
+                cls._recursive_container(child, level)
+            else:
+                print(f"{'------' * level}{child}")
+
 class Timeline:
 
     def __init__(self, name, timecode_info):
