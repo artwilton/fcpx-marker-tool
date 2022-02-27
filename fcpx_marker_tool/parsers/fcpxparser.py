@@ -66,17 +66,35 @@ class FCPXParser:
             duration = child_element.get('duration')
 
         return start, duration, format, non_drop_frame
+
+    def _undefined_format_check(self, format_element):
+        # audio only resources don't have format tags, image resources have format tags that point to "FFVideoFormatRateUndefined"
+        # FCPX assumes 60fps or 6000/100 for these resources when dealing with frame rates
+        if format_element is None or format_element.get('name') == "FFVideoFormatRateUndefined":
+            format_id, frame_rate = ('60fps', (6000, 100))
+        else:
+            format_id, frame_rate = helpers.get_attributes(format_element, 'id', 'frameDuration')
+            frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
+
+        return format_id, frame_rate
             
     def _create_timecode_info(self, format, start, duration, non_drop_frame):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
-        format_id, frame_rate = helpers.get_attributes(format_element, 'id', 'frameDuration')
-        frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
+
+        format_id, frame_rate = self._undefined_format_check(self, format_element)
+        
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
         timecode_info = TimecodeInfo(format_id, frame_rate, start, duration, non_drop_frame=non_drop_frame)
 
         return timecode_info
+
+    # CONTAINERS
+
+    # Grab top level event elements
+
+    # def _create_containers(self, pro)
 
     # TIMELINES
     def _create_timelines(self, project_file):
@@ -86,21 +104,30 @@ class FCPXParser:
             print("'project' element not found")
 
         for timeline in timelines:
+            # Grab metadata, create timeline instance
             name = timeline.get('name')
             sequence = timeline.find('./sequence')
             start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
             timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
-            project_file.add_timeline(Timeline(name, timecode_info))
+            timeline = project_file.add_timeline(Timeline(name, timecode_info))
+
+            # .iter() through the rest of the timeline, have function responsible for filtering clip metadata handling based on clip type
+            # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
 
         return timelines
+
+    def _create_clips(self, project_file, timeline_xml_elements):
+        for timeline_element in timeline_xml_elements:
+            timeline = 
 
     def parse_xml(self):
         project_file = self._create_project_file()
         self._create_resources(project_file)
-        timelines = self._create_timelines(project_file)
+        # timelines = self._create_timelines(project_file)
+        
 
-        print(timelines)
+        # print(timelines)
 
-        # resources = project_file.resources
-        # for resource in resources:
-        #     print(resource.timecode_info.standard_timecode)
+        resources = project_file.resources
+        for resource in resources:
+            print(resource.timecode_info.standard_timecode)
