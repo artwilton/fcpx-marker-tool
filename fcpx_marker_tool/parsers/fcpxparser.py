@@ -1,4 +1,5 @@
 from pathlib import Path
+import resource
 from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
 from common.timecodeinfo import TimecodeInfo
@@ -90,53 +91,41 @@ class FCPXParser:
 
         return timecode_info
 
-    # CONTAINERS
-
-    # Grab top level event elements
-
+    # EVENTS
     def _parse_event(self, event):
+        # parse clip and project elements, return an array of Clip and Timeline objects
         event_children = []
         for event_child in event:
-            self._filter_event_children(event_child)
-        # parse clip type and project type
-        # return an array of clips and timelines
+            event_children.append(self._filter_event_children(event_child))
         return event_children
     
     def _filter_event_children(self, event_child):
         if event_child.tag.endswith('clip'):
-            event_child = self._handle_clip_type(event_child)
+            event_child = self._handle_clip_creation(event_child, event_clip=True)
         elif event_child.tag == 'project':
             event_child = self._create_timeline(event_child)
 
         return event_child
 
-    # def _handle_clip_type(self, clip_element):
-    #     clip = Clip(name, type, timecode_info, resource_id=None)
+    def _handle_clip_creation(self, clip_element, event_clip=False):
+        if event_clip:
+            clip_tuple = self._filter_event_clips(clip_element)
+        else:
+            clip_tuple = self._filter_timeline_clips(clip_element)
 
-    #     return clip
+        name, type, timecode_info, resource_id = clip_tuple
 
-    # def _filter_clip_types(self, clip):
-    #     pass
+        return Clip(name, type, timecode_info, resource_id)
 
-    # ########################################################################################################################
+    def _filter_event_clips(self, clip_element):
+        
+        pass
 
-    # # methods copied for temp reference
-    # def _handle_asset_resource(self, resource):
-    #     id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
-    #     path = resource.find('./media-rep').get('src')
-    #     non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
-         
-    #     return id, name, path, start, duration, format, non_drop_frame
+    def _filter_timeline_clips(self, clip_element):
+        
+        pass
 
-    # def _handle_media_resource(self, resource):
-    #     id, name = helpers.get_attributes(resource, 'id', 'name')
-    #     path = 'N/A'
-    #     start, duration, format, non_drop_frame = self._filter_media_child_element(resource)
-
-    #     return id, name, path, start, duration, format, non_drop_frame
-
-    ########################################################################################################################
-
+    # CONTAINERS
     def _create_containers(self, project_file):
         events = self.xml_root.findall('./library/event/')
 
@@ -161,16 +150,12 @@ class FCPXParser:
 
         return timeline
 
-    # def _create_clips(self, project_file, timeline_xml_elements):
-    #     for timeline_element in timeline_xml_elements:
-    #         timeline = 
-
     def parse_xml(self):
         project_file = self._create_project_file()
         self._create_resources(project_file)
-        # self._create_containers(project_file)
-        # timelines = self._create_timelines(project_file)
-        # print(timelines)
+        self._create_containers(project_file)
+
+        # return project_file
 
         resources = project_file.resources
         for resource in resources:
