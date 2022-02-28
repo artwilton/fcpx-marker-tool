@@ -2,6 +2,7 @@ from pathlib import Path
 from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip
 from common.timecodeinfo import TimecodeInfo
+from fcpx_marker_tool.common.projectclasses import Container
 
 class FCPXParser:
 
@@ -94,27 +95,44 @@ class FCPXParser:
 
     # Grab top level event elements
 
-    # def _create_containers(self, pro)
+    def _get_events(self):
+        try:
+            events = self.xml_root.findall('./library/event/')
+        except:
+            print("No Events found")
+
+        return events
+
+    def _parse_event(self, event):
+        event_children = []
+        # parse clip type and project type
+        # return an array of clips and timelines
+        return event_children
+
+    def _create_containers(self, project_file, events):
+        root_container = Container(project_file.name)
+
+        for event in events:
+            event_children = self._parse_event(event)
+            event_container = Container(event.get("name"), event_children)
+            root_container.add_child(event_container)
+        
+        return root_container
 
     # TIMELINES
-    def _create_timelines(self, project_file):
-        try:
-            timelines = self.xml_root.findall('./library/event/project')
-        except:
-            print("'project' element not found")
+    def _create_timeline(self, project_file):
 
-        for timeline in timelines:
-            # Grab metadata, create timeline instance
-            name = timeline.get('name')
-            sequence = timeline.find('./sequence')
-            start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
-            timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
-            timeline = project_file.add_timeline(Timeline(name, timecode_info))
+        # Grab metadata, create timeline instance
+        name = timeline.get('name')
+        sequence = timeline.find('./sequence')
+        start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
+        timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
+        timeline = project_file.add_timeline(Timeline(name, timecode_info))
 
-            # .iter() through the rest of the timeline, have function responsible for filtering clip metadata handling based on clip type
-            # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
+        # .iter() through the rest of the timeline, have function responsible for filtering clip metadata handling based on clip type
+        # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
 
-        return timelines
+        return timeline
 
     # def _create_clips(self, project_file, timeline_xml_elements):
     #     for timeline_element in timeline_xml_elements:
@@ -123,9 +141,8 @@ class FCPXParser:
     def parse_xml(self):
         project_file = self._create_project_file()
         self._create_resources(project_file)
+        events = self._get_events()
         # timelines = self._create_timelines(project_file)
-        
-
         # print(timelines)
 
         resources = project_file.resources
