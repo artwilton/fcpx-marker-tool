@@ -4,13 +4,15 @@ class ProjectFile:
         self.name = name
         self.path = path
         self.resources = []
-        self.timelines = []
+        self.root_container = Container(name)
 
     def add_resource(self, resource):
         self.resources.append(resource)  
 
-    def add_timeline(self, timeline):
-        self.timelines.append(timeline)
+    def get_timelines(self):
+        timelines = []
+        # recursively grab timelines from self.root_container
+        return timelines
 
 class Resource:
     """Allows for shared characteristics between multiple types of xml imports"""
