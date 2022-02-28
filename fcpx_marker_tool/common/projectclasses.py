@@ -66,11 +66,14 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, type, timecode_info):
+    def __init__(self, name, type, timecode_info, resource_id=None):
         self.name = name
         self.type = type
         self.timecode_info = timecode_info
         self.markers = []
+        # resource_id is optional. It isn't necessary for dealing with timelines, but can be helpful for custom workflows.
+        if resource_id is not None:
+            self.resource_id = resource_id
 
     def add_marker(self, marker):
         self.markers.append(marker)
