@@ -95,29 +95,19 @@ class FCPXParser:
 
     # Grab top level event elements
 
-    def _get_events(self):
-        try:
-            events = self.xml_root.findall('./library/event/')
-        except:
-            print("No Events found")
-
-        return events
-
     def _parse_event(self, event):
         event_children = []
         # parse clip type and project type
         # return an array of clips and timelines
         return event_children
 
-    def _create_containers(self, project_file, events):
-        root_container = Container(project_file.name)
+    def _create_containers(self, project_file):
+        events = self.xml_root.findall('./library/event/')
 
         for event in events:
             event_children = self._parse_event(event)
             event_container = Container(event.get("name"), event_children)
-            root_container.add_child(event_container)
-        
-        return root_container
+            project_file.add_child(event_container)
 
     # TIMELINES
     def _create_timeline(self, project_file):
@@ -141,7 +131,7 @@ class FCPXParser:
     def parse_xml(self):
         project_file = self._create_project_file()
         self._create_resources(project_file)
-        events = self._get_events()
+        self._create_containers(project_file)
         # timelines = self._create_timelines(project_file)
         # print(timelines)
 
