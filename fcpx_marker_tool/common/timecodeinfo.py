@@ -2,8 +2,7 @@ from timecode import Timecode
 
 class TimecodeInfo:
 
-    def __init__(self, id, frame_rate, start, duration, offset=None, non_drop_frame=False):
-        self.id = id # can be anything useful, example is "Format id" for FCPX
+    def __init__(self, frame_rate, start, duration, offset=None, non_drop_frame=False):
         self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
         # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps.
         self.offset = offset # int representing start frame within a timeline, optional because usually only clips have this property

@@ -1,8 +1,7 @@
 from pathlib import Path
 from common import helpers
-from common.projectclasses import ProjectFile, Resource, Timeline, Clip
+from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
 from common.timecodeinfo import TimecodeInfo
-from fcpx_marker_tool.common.projectclasses import Container
 
 class FCPXParser:
 
@@ -72,22 +71,22 @@ class FCPXParser:
         # audio only resources don't have format tags, image resources have format tags that point to "FFVideoFormatRateUndefined"
         # FCPX assumes 60fps or 6000/100 for these resources when dealing with frame rates
         if format_element is None or format_element.get('name') == "FFVideoFormatRateUndefined":
-            format_id, frame_rate = ('60fps', (6000, 100))
+            frame_rate = (6000, 100)
         else:
-            format_id, frame_rate = helpers.get_attributes(format_element, 'id', 'frameDuration')
+            frame_rate = format_element.get('frameDuration')
             frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
 
-        return format_id, frame_rate
+        return frame_rate
             
     def _create_timecode_info(self, format, start, duration, non_drop_frame):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
 
-        format_id, frame_rate = self._undefined_format_check(format_element)
+        frame_rate = self._undefined_format_check(format_element)
         
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
-        timecode_info = TimecodeInfo(format_id, frame_rate, start, duration, non_drop_frame=non_drop_frame)
+        timecode_info = TimecodeInfo(frame_rate, start, duration, non_drop_frame=non_drop_frame)
 
         return timecode_info
 
@@ -111,30 +110,30 @@ class FCPXParser:
 
         return event_child
 
-    def _handle_clip_type(self, clip_element):
-        clip = Clip(name, type, timecode_info, resource_id=None)
+    # def _handle_clip_type(self, clip_element):
+    #     clip = Clip(name, type, timecode_info, resource_id=None)
 
-        return clip
+    #     return clip
 
-    def _filter_clip_types(self, clip):
-        pass
+    # def _filter_clip_types(self, clip):
+    #     pass
 
-    ########################################################################################################################
+    # ########################################################################################################################
 
-    # methods copied for temp reference
-    def _handle_asset_resource(self, resource):
-        id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
-        path = resource.find('./media-rep').get('src')
-        non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
+    # # methods copied for temp reference
+    # def _handle_asset_resource(self, resource):
+    #     id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
+    #     path = resource.find('./media-rep').get('src')
+    #     non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
          
-        return id, name, path, start, duration, format, non_drop_frame
+    #     return id, name, path, start, duration, format, non_drop_frame
 
-    def _handle_media_resource(self, resource):
-        id, name = helpers.get_attributes(resource, 'id', 'name')
-        path = 'N/A'
-        start, duration, format, non_drop_frame = self._filter_media_child_element(resource)
+    # def _handle_media_resource(self, resource):
+    #     id, name = helpers.get_attributes(resource, 'id', 'name')
+    #     path = 'N/A'
+    #     start, duration, format, non_drop_frame = self._filter_media_child_element(resource)
 
-        return id, name, path, start, duration, format, non_drop_frame
+    #     return id, name, path, start, duration, format, non_drop_frame
 
     ########################################################################################################################
 
@@ -169,7 +168,7 @@ class FCPXParser:
     def parse_xml(self):
         project_file = self._create_project_file()
         self._create_resources(project_file)
-        self._create_containers(project_file)
+        # self._create_containers(project_file)
         # timelines = self._create_timelines(project_file)
         # print(timelines)
 
