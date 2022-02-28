@@ -97,9 +97,46 @@ class FCPXParser:
 
     def _parse_event(self, event):
         event_children = []
+        for event_child in event:
+            self._filter_event_children(event_child)
         # parse clip type and project type
         # return an array of clips and timelines
         return event_children
+    
+    def _filter_event_children(self, event_child):
+        if event_child.tag.endswith('clip'):
+            event_child = self._handle_clip_type(event_child)
+        elif event_child.tag == 'project':
+            event_child = self._create_timeline(event_child)
+
+        return event_child
+
+    def _handle_clip_type(self, clip_element):
+        clip = Clip(name, type, timecode_info, resource_id=None)
+
+        return clip
+
+    def _filter_clip_types(self, clip):
+        pass
+
+    ########################################################################################################################
+
+    # methods copied for temp reference
+    def _handle_asset_resource(self, resource):
+        id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
+        path = resource.find('./media-rep').get('src')
+        non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
+         
+        return id, name, path, start, duration, format, non_drop_frame
+
+    def _handle_media_resource(self, resource):
+        id, name = helpers.get_attributes(resource, 'id', 'name')
+        path = 'N/A'
+        start, duration, format, non_drop_frame = self._filter_media_child_element(resource)
+
+        return id, name, path, start, duration, format, non_drop_frame
+
+    ########################################################################################################################
 
     def _create_containers(self, project_file):
         events = self.xml_root.findall('./library/event/')
@@ -107,17 +144,18 @@ class FCPXParser:
         for event in events:
             event_children = self._parse_event(event)
             event_container = Container(event.get("name"), event_children)
-            project_file.add_child(event_container)
+            project_file.root_container.add_child(event_container)
 
     # TIMELINES
-    def _create_timeline(self, project_file):
+    def _create_timeline(self, timeline_element):
 
         # Grab metadata, create timeline instance
-        name = timeline.get('name')
-        sequence = timeline.find('./sequence')
+        name = timeline_element.get('name')
+        sequence = timeline_element.find('./sequence')
         start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
         timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
-        timeline = project_file.add_timeline(Timeline(name, timecode_info))
+        
+        timeline = Timeline(name, timecode_info)
 
         # .iter() through the rest of the timeline, have function responsible for filtering clip metadata handling based on clip type
         # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
