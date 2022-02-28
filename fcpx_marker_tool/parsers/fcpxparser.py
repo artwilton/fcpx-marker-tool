@@ -81,7 +81,7 @@ class FCPXParser:
     def _create_timecode_info(self, format, start, duration, non_drop_frame):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
 
-        format_id, frame_rate = self._undefined_format_check(self, format_element)
+        format_id, frame_rate = self._undefined_format_check(format_element)
         
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
@@ -116,9 +116,9 @@ class FCPXParser:
 
         return timelines
 
-    def _create_clips(self, project_file, timeline_xml_elements):
-        for timeline_element in timeline_xml_elements:
-            timeline = 
+    # def _create_clips(self, project_file, timeline_xml_elements):
+    #     for timeline_element in timeline_xml_elements:
+    #         timeline = 
 
     def parse_xml(self):
         project_file = self._create_project_file()
@@ -130,4 +130,4 @@ class FCPXParser:
 
         resources = project_file.resources
         for resource in resources:
-            print(resource.timecode_info.standard_timecode)
+            print(f"{resource.name}, {resource.id}, {resource.timecode_info.frame_rate}")

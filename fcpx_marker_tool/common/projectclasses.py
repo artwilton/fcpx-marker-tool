@@ -45,8 +45,8 @@ class Container:
 
         for child in sorted_container:
             if isinstance(child, cls):
-                level += 1
-                cls._recursive_container(child, level)
+                # level += 1
+                cls._recursive_container(child, level + 1)
             else:
                 print(f"{'------' * level}{child}")
 
@@ -56,9 +56,13 @@ class Timeline:
         self.name = name
         self.timecode_info = timecode_info
         self.clips = []
+        self.markers = []
 
     def add_clip(self, clip):
         self.clips.append(clip)
+
+    def add_marker(self, marker):
+        self.markers.append(marker)
 
 class Clip:
 
