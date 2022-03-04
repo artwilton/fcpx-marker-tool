@@ -68,12 +68,14 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, type, timecode_info, resource_id=None):
+    def __init__(self, name, type, timecode_info, track, resource_id=None):
         self.name = name
         self.type = type
         self.timecode_info = timecode_info
+        self.track = track
         self.markers = []
-        # resource_id is optional. It isn't necessary for dealing with timelines, but can be helpful for custom workflows.
+        # resource_id is optional. It isn't necessary for dealing with clips in timelines at a basic level,
+        # but it can be helpful for custom workflows where referencing the original timecode information is necessary.
         if resource_id is not None:
             self.resource_id = resource_id
 

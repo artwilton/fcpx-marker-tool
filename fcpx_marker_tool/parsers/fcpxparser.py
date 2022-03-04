@@ -1,5 +1,4 @@
 from pathlib import Path
-import resource
 from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
 from common.timecodeinfo import TimecodeInfo
@@ -79,7 +78,7 @@ class FCPXParser:
 
         return frame_rate
             
-    def _create_timecode_info(self, format, start, duration, non_drop_frame):
+    def _create_timecode_info(self, format, start, duration, non_drop_frame=False, offset=None):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
 
         frame_rate = self._undefined_format_check(format_element)
@@ -87,7 +86,7 @@ class FCPXParser:
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
-        timecode_info = TimecodeInfo(frame_rate, start, duration, non_drop_frame=non_drop_frame)
+        timecode_info = TimecodeInfo(frame_rate, start, duration, non_drop_frame, offset)
 
         return timecode_info
 
@@ -108,26 +107,32 @@ class FCPXParser:
         return event_child
 
     def _handle_clip_creation(self, clip_element, event_clip=False):
-        if event_clip:
-            clip_tuple = self._filter_event_clips(clip_element)
-        else:
-            clip_tuple = self._filter_timeline_clips(clip_element)
+        name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
+        type = clip_element.tag
+        format, non_drop_frame, resource_id = self._filter_clip_types(clip_element)
 
-        name, type, timecode_info, resource_id = clip_tuple
+        if event_clip:
+            pass
+            # grab timecode info from first matching resource
+        else:
+            timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame, offset)
 
         return Clip(name, type, timecode_info, resource_id)
 
-    def _filter_event_clips(self, clip_element):
-        
-        pass
+    def _filter_clip_types(self, clip_element):
 
-    def _filter_timeline_clips(self, clip_element):
-        
-        pass
+        clip_type = clip_element.tag
+
+        if any(type == clip_type for type in ['asset-clip', '']):
+            pass
+        elif (clip_type == ''):
+            pass
+
+        return format, non_drop_frame, resource_id
 
     # CONTAINERS
     def _create_containers(self, project_file):
-        events = self.xml_root.findall('./library/event/')
+        events = self.xml_root.findall('./library/event')
 
         for event in events:
             event_children = self._parse_event(event)
