@@ -29,7 +29,7 @@ class FCPXParser:
             print("'resources' element not found")
 
         for resource in resources:
-            if not resource.tag == 'format':
+            if resource.tag == 'asset' or resource.tag == 'media':
                 id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
                 timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
                 project_file.add_resource(Resource(id, name, path, timecode_info))
