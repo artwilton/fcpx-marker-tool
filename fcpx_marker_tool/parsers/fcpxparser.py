@@ -31,7 +31,8 @@ class FCPXParser:
         for resource in resources:
             if resource.tag == 'asset' or resource.tag == 'media':
                 id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
-                timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
+                frame_rate = self._frame_rate_from_format(format)
+                timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame)
                 project_file.add_resource(Resource(id, name, path, timecode_info))
 
     def _filter_resource_type(self, resource):
@@ -84,8 +85,7 @@ class FCPXParser:
         
         return frame_rate
             
-    def _create_timecode_info(self, format, start, duration, non_drop_frame=True, offset=None):
-        frame_rate = self._frame_rate_from_format(format)
+    def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None):
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
@@ -118,19 +118,33 @@ class FCPXParser:
         else:
             format, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
 
-        timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame, offset)
+        frame_rate = self._frame_rate_from_format(format)
+        timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame, offset)
 
         return Clip(name, type, timecode_info, resource_id)
 
     def _get_event_clip_format_info(self, clip_element):
-        if clip_element.get('format') is not None:
+        format = clip_element.get('format')
+        resource_id = clip_element.get('ref')
 
-    #     If there is a format attribute: use the format attribute for assigning frame rate and calculating Marker start values. Grab the tcFormat value as well. If there is no format tag: check for a "ref" tag and use common function for parsing "ref" info. If there is no ref tag, find the ref tag in the first child element, and use "ref" parsing function.
+        if format:
+            frame_rate = self._frame_rate_from_format(format)
+            non_drop_frame = clip_element.get('tcFormat')
+        elif resource_id:
+            frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
+        elif resource_id is None:
+            resource_id = clip_element.get('./ref')
+            frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
+            
+    # If there is no format tag: check for a "ref" tag and use common function for parsing "ref" info. If there is no ref tag, find the ref tag in the first child element, and use "ref" parsing function.
 
     # Ref function - "ref" will refer to a Resource. Find the matching Resource, grab the frame rate and tcformat from there.
-        pass
+        return format, non_drop_frame, resource_id
 
     def _get_timeline_clip_format_info(self, clip_element):
+        pass
+
+    def _parse_ref_info(self, resource_id):
         pass
 
     # CONTAINERS
@@ -149,7 +163,8 @@ class FCPXParser:
         name = timeline_element.get('name')
         sequence = timeline_element.find('./sequence')
         start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
-        timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame)
+        frame_rate = self._frame_rate_from_format(format)
+        timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame)
         
         timeline = Timeline(name, timecode_info)
 
