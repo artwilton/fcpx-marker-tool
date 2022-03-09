@@ -45,7 +45,7 @@ class FCPXParser:
     def _handle_asset_resource(self, resource):
         id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
         path = resource.find('./media-rep').get('src')
-        non_drop_frame = False # asset resources don't contain info about NDF or DF, so just assume False
+        non_drop_frame = True # asset resources don't contain info about NDF or DF, so just assume NDF
          
         return id, name, path, start, duration, format, non_drop_frame
 
@@ -78,7 +78,7 @@ class FCPXParser:
 
         return frame_rate
             
-    def _create_timecode_info(self, format, start, duration, non_drop_frame=False, offset=None):
+    def _create_timecode_info(self, format, start, duration, non_drop_frame=True, offset=None):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
 
         frame_rate = self._undefined_format_check(format_element)
