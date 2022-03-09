@@ -77,12 +77,15 @@ class FCPXParser:
             frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
 
         return frame_rate
-            
-    def _create_timecode_info(self, format, start, duration, non_drop_frame=True, offset=None):
-        format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
 
+    def _frame_rate_from_format(self, format):
+        format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
         frame_rate = self._undefined_format_check(format_element)
         
+        return frame_rate
+            
+    def _create_timecode_info(self, format, start, duration, non_drop_frame=True, offset=None):
+        frame_rate = self._frame_rate_from_format(format)
         start = helpers.get_number_of_frames(start, frame_rate)
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
@@ -120,6 +123,11 @@ class FCPXParser:
         return Clip(name, type, timecode_info, resource_id)
 
     def _get_event_clip_format_info(self, clip_element):
+        if clip_element.get('format') is not None:
+
+    #     If there is a format attribute: use the format attribute for assigning frame rate and calculating Marker start values. Grab the tcFormat value as well. If there is no format tag: check for a "ref" tag and use common function for parsing "ref" info. If there is no ref tag, find the ref tag in the first child element, and use "ref" parsing function.
+
+    # Ref function - "ref" will refer to a Resource. Find the matching Resource, grab the frame rate and tcformat from there.
         pass
 
     def _get_timeline_clip_format_info(self, clip_element):
