@@ -109,26 +109,21 @@ class FCPXParser:
     def _handle_clip_creation(self, clip_element, event_clip=False):
         name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
         type = clip_element.tag
-        format, non_drop_frame, resource_id = self._filter_clip_types(clip_element)
-
+        
         if event_clip:
-            pass
-            # grab timecode info from first matching resource
+            format, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
         else:
-            timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame, offset)
+            format, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
+
+        timecode_info = self._create_timecode_info(format, start, duration, non_drop_frame, offset)
 
         return Clip(name, type, timecode_info, resource_id)
 
-    def _filter_clip_types(self, clip_element):
+    def _get_event_clip_format_info(self, clip_element):
+        pass
 
-        clip_type = clip_element.tag
-
-        if any(type == clip_type for type in ['asset-clip', '']):
-            pass
-        elif (clip_type == ''):
-            pass
-
-        return format, non_drop_frame, resource_id
+    def _get_timeline_clip_format_info(self, clip_element):
+        pass
 
     # CONTAINERS
     def _create_containers(self, project_file):
