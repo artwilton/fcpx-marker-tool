@@ -2,6 +2,7 @@ from pathlib import Path
 from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
 from common.timecodeinfo import TimecodeInfo
+from fcpx_marker_tool.common.helpers import frame_rate_to_tuple
 
 class FCPXParser:
 
@@ -114,11 +115,10 @@ class FCPXParser:
         type = clip_element.tag
         
         if event_clip:
-            format, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
+            frame_rate, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
         else:
-            format, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
+            frame_rate, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
 
-        frame_rate = self._frame_rate_from_format(format)
         timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame, offset)
 
         return Clip(name, type, timecode_info, resource_id)
@@ -136,16 +136,21 @@ class FCPXParser:
             resource_id = clip_element.get('./ref')
             frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
             
-    # If there is no format tag: check for a "ref" tag and use common function for parsing "ref" info. If there is no ref tag, find the ref tag in the first child element, and use "ref" parsing function.
-
-    # Ref function - "ref" will refer to a Resource. Find the matching Resource, grab the frame rate and tcformat from there.
-        return format, non_drop_frame, resource_id
+        return frame_rate, non_drop_frame, resource_id
 
     def _get_timeline_clip_format_info(self, clip_element):
         pass
 
     def _parse_ref_info(self, resource_id):
+        # "ref" will refer to a Resource. Find the matching Resource, grab the frame rate and tcformat from there.
         pass
+
+    def _parse_non_drop_frame(self, timecode_format):
+        # easiest to make anything that isn't 'DF' True, since 'NDF' is most common and this will catch if timecode_format is None
+        if timecode_format == 'DF':
+            return False
+        else:
+            return True
 
     # CONTAINERS
     def _create_containers(self, project_file):
