@@ -148,7 +148,13 @@ class FCPXParser:
         return frame_rate, non_drop_frame, resource_id
 
     def _parse_ref_info(self, resource_id):
-        # "ref" will refer to a Resource. Find the matching Resource, grab the frame rate and tcformat from there.
+        # Find Resource with an id matching 'ref', grab the frame rate and tcformat from there.
+        for resource in self.project_file.resources:
+            if resource.id == resource_id:
+                frame_rate = resource.timecode_info.frame_rate
+                non_drop_frame = resource.timecode_info.non_drop_frame
+                break
+
         return frame_rate, non_drop_frame
 
     def _parse_non_drop_frame(self, timecode_format):
@@ -185,12 +191,11 @@ class FCPXParser:
         return timeline
 
     def parse_xml(self):
-        project_file = self.project_file
-        self._create_resources(project_file)
-        self._create_containers(project_file)
+        self._create_resources(self.project_file)
+        self._create_containers(self.project_file)
 
         # return project_file
 
-        resources = project_file.resources
+        resources = self.project_file.resources
         for resource in resources:
             print(f"{resource.name}, {resource.id}, {resource.timecode_info.frame_rate}")
