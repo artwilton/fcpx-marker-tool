@@ -126,24 +126,23 @@ class FCPXParser:
     def _get_event_clip_format_info(self, clip_element):
         format = clip_element.get('format')
         resource_id = clip_element.get('ref')
+        if resource_id is None:
+            resource_id = clip_element.get('./ref')
 
         if format:
             frame_rate = self._frame_rate_from_format(format)
             non_drop_frame = clip_element.get('tcFormat')
-        elif resource_id:
-            frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
-        elif resource_id is None:
-            resource_id = clip_element.get('./ref')
+        else:
             frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
             
         return frame_rate, non_drop_frame, resource_id
 
     def _get_timeline_clip_format_info(self, clip_element):
-        pass
+        return frame_rate, non_drop_frame, resource_id
 
     def _parse_ref_info(self, resource_id):
         # "ref" will refer to a Resource. Find the matching Resource, grab the frame rate and tcformat from there.
-        pass
+        return frame_rate, non_drop_frame
 
     def _parse_non_drop_frame(self, timecode_format):
         # easiest to make anything that isn't 'DF' True, since 'NDF' is most common and this will catch if timecode_format is None
