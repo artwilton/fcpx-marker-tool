@@ -2,7 +2,6 @@ from pathlib import Path
 from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
 from common.timecodeinfo import TimecodeInfo
-from fcpx_marker_tool.common.helpers import frame_rate_to_tuple
 
 class FCPXParser:
 
