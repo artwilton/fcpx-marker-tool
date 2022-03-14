@@ -8,9 +8,18 @@ class FCPXParser:
 
     def __init__(self, xml_root):
         self.xml_root = xml_root
+        self._project_file = self._create_project_file()
 
     # PROJECT FILE
+    @property
+    def project_file(self):
+        return self._project_file
+
     def _create_project_file(self):
+        name, path = self._get_project_info()
+        self._project_file = ProjectFile(name, path)
+
+    def _get_project_info(self):
         try:
             library = self.xml_root.find('library')
         except:
@@ -18,9 +27,8 @@ class FCPXParser:
 
         path = library.get('location')
         name = Path(path).name
-        project_file = ProjectFile(name, path)
 
-        return project_file
+        return name, path
 
     # RESOURCES
     def _create_resources(self, project_file):
@@ -178,7 +186,7 @@ class FCPXParser:
         return timeline
 
     def parse_xml(self):
-        project_file = self._create_project_file()
+        project_file = self.project_file
         self._create_resources(project_file)
         self._create_containers(project_file)
 
