@@ -93,8 +93,12 @@ class FCPXParser:
         
         return frame_rate
             
-    def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None):
-        start = helpers.get_number_of_frames(start, frame_rate)
+    def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None, conformed_rate=None):
+        if conformed_rate is None:
+            start = helpers.get_number_of_frames(start, frame_rate)
+        else:
+            start = helpers.get_number_of_frames(start, conformed_rate)
+            
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
         timecode_info = TimecodeInfo(frame_rate, start, duration, non_drop_frame, offset)
@@ -118,21 +122,20 @@ class FCPXParser:
         return event_child
 
     def _handle_clip_creation(self, clip_element, event_clip=False):
-        name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
+        name, duration, offset = helpers.get_attributes(clip_element, 'name', 'duration', 'offset')
         type = clip_element.tag
         
         if event_clip:
-            frame_rate, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
+            frame_rate, start, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
         else:
-            frame_rate, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
+            frame_rate, start, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
 
         timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame, offset)
 
         return Clip(name, type, timecode_info, resource_id)
 
     def _get_event_clip_format_info(self, clip_element):
-        format = clip_element.get('format')
-        resource_id = clip_element.get('ref')
+        resource_id, start, format = helpers.get_attributes(clip_element, 'ref', 'start', 'format')
         if resource_id is None:
             resource_id = clip_element.get('./ref')
 
@@ -142,7 +145,7 @@ class FCPXParser:
         else:
             frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
             
-        return frame_rate, non_drop_frame, resource_id
+        return frame_rate, start, non_drop_frame, resource_id
 
     def _get_timeline_clip_format_info(self, clip_element):
         return frame_rate, non_drop_frame, resource_id
@@ -189,6 +192,15 @@ class FCPXParser:
         # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
 
         return timeline
+
+    def _get_primary_clips(self, clip_element):
+        pass
+
+    def _get_connected_clips(self, clip_element):
+        pass
+
+    def _parse_audition(self):
+        pass
 
     def parse_xml(self):
         self._create_resources(self.project_file)
