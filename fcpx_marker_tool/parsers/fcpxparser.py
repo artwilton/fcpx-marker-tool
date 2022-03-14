@@ -17,7 +17,7 @@ class FCPXParser:
 
     def _create_project_file(self):
         name, path = self._get_project_info()
-        self._project_file = ProjectFile(name, path)
+        return ProjectFile(name, path)
 
     def _get_project_info(self):
         try:
