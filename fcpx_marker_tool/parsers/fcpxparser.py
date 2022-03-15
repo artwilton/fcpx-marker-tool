@@ -150,7 +150,7 @@ class FCPXParser:
     def _get_timeline_clip_format_info(self, clip_element, timeline_obj):
         conform_rate = clip_element.find('./conform-rate')
 
-        if conform_rate is None or conform_rate.get('scaleEnabled') == 0:
+        if (conform_rate is None) or (conform_rate.get('scaleEnabled') == 0):
             frame_rate = timeline_obj.timecode_info.frame_rate
             start
             non_drop_frame = timeline_obj.timecode_info.non_drop_frame
@@ -178,7 +178,7 @@ class FCPXParser:
             # Grab 'ref' based on if a clip is a 'video' element or a 'gap' with a nested 'audio' element
             if clip_child.tag == 'video':
                 resource_id = clip_child.get('ref')
-            elif clip_child.find('./audio/[@ref]'):
+            elif clip_child.tag == 'gap' and clip_child.find('./audio/[@ref]'):
                 resource_id = clip_child.find('./audio').get('ref')
 
         return resource_id
