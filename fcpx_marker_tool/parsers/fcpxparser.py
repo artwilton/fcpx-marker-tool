@@ -94,11 +94,11 @@ class FCPXParser:
         
         return frame_rate
             
-    def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None, conformed_rate=None):
-        if conformed_rate is None:
+    def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None, conformed_frame_rate=None):
+        if conformed_frame_rate is None:
             start = helpers.get_number_of_frames(start, frame_rate)
         else:
-            start = helpers.get_number_of_frames(start, conformed_rate)
+            start = helpers.get_number_of_frames(start, conformed_frame_rate)
             
         duration = helpers.get_number_of_frames(duration, frame_rate)
 
@@ -122,22 +122,27 @@ class FCPXParser:
 
         return event_child
 
-    def _handle_clip_creation(self, clip_element, event_clip=False, timeline_obj=None):
-        name, duration, offset = helpers.get_attributes(clip_element, 'name', 'duration', 'offset')
+    def _handle_clip_creation(self, clip_element, timeline_frame_rate=None, timeline_ndf=None, event_clip=False):
+        name, start, duration, offset = helpers.get_attributes(clip_element, 'start', 'name', 'duration', 'offset')
         type = clip_element.tag
+        resource_id = self._get_resource_id(clip_element)
         
         if event_clip:
-            frame_rate, start, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
+            frame_rate, non_drop_frame = self._get_event_clip_format_info(clip_element, resource_id)
+            conformed_frame_rate = None
         else:
-            frame_rate, start, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element, timeline_obj)
+            frame_rate = timeline_frame_rate
+            non_drop_frame = timeline_ndf
+            conformed_frame_rate = self._get_timeline_clip_format_info(clip_element)
 
-        timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame, offset)
+        timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame, offset, conformed_frame_rate)
+
+        # create clip, then create markers
 
         return Clip(name, type, timecode_info, resource_id)
 
-    def _get_event_clip_format_info(self, clip_element):
-        start, format = helpers.get_attributes(clip_element, 'ref', 'start', 'format')
-        resource_id = self._get_resource_id(clip_element)
+    def _get_event_clip_format_info(self, clip_element, resource_id):
+        format = clip_element.get('format')
 
         if format:
             frame_rate = self._frame_rate_from_format(format)
@@ -145,20 +150,26 @@ class FCPXParser:
         else:
             frame_rate, non_drop_frame = self._parse_ref_info(resource_id)
             
-        return frame_rate, start, non_drop_frame, resource_id
+        return frame_rate, non_drop_frame
 
-    def _get_timeline_clip_format_info(self, clip_element, timeline_obj):
+    def _get_timeline_clip_format_info(self, clip_element):
         conform_rate = clip_element.find('./conform-rate')
 
-        if (conform_rate is None) or (conform_rate.get('scaleEnabled') == 0):
-            frame_rate = timeline_obj.timecode_info.frame_rate
-            start
-            non_drop_frame = timeline_obj.timecode_info.non_drop_frame
-            resource_id = self._get_resource_id(clip_element)
-        elif conform_rate.get('scaleEnabled') == 1:
-            pass
+        if conform_rate is None:
+           conformed_frame_rate = None
+        elif conform_rate.get('scaleEnabled') != 0 or conform_rate.get('scaleEnabled') is None:
+            source_frame_rate = conform_rate.get('srcFrameRate')
+            conformed_frame_rate = self._parse_conformed_frame_rate(source_frame_rate)
 
-        return frame_rate, start, non_drop_frame, resource_id
+        return conformed_frame_rate
+
+    def _parse_conformed_frame_rate(self, source_frame_rate):
+        # Matches up values based on Apple's documentation:
+        # https://developer.apple.com/documentation/professional_video_applications/fcpxml_reference/story_elements/conform-rate
+
+        conformed_frame_rate = ''
+
+        return conformed_frame_rate
 
     def _get_resource_id(self, clip_element):
         resource_id = clip_element.get('ref')
@@ -212,6 +223,8 @@ class FCPXParser:
     # TIMELINES
     def _create_timeline(self, timeline_element):
 
+        clips_list = self._create_timeline_clip_list(timeline_element)
+
         # Grab metadata, create timeline instance
         name = timeline_element.get('name')
         sequence = timeline_element.find('./sequence')
@@ -221,23 +234,58 @@ class FCPXParser:
         
         timeline = Timeline(name, timecode_info)
 
-        # .iter() through the rest of the timeline, have function responsible for filtering clip metadata handling based on clip type
-        # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
 
         # creating timeline clips:
-
-        # self._handle_clip_creation(clip_element, event_clip=False, timeline_frame_rate)
+        for clip in clips_list:
+            parsed_clip = self._handle_clip_creation(clip, frame_rate, non_drop_frame)
+            Timeline.add_clip(parsed_clip)
 
         return timeline
 
-    def _get_primary_clips(self, clip_element):
-        pass
+    def _create_timeline_clip_list(self, timeline_element):
 
-    def _get_connected_clips(self, clip_element):
-        pass
+        spine_element = timeline_element.find('./sequence/spine')
+        primary_clips = self._get_primary_clips(spine_element)
+        full_clips_list = self._get_connected_clips(primary_clips)
 
-    def _parse_audition(self):
-        pass
+        return full_clips_list
+
+    def _get_primary_clips(self, spine_element):
+        primary_clips = []
+        
+        for clip in spine_element.iterfind('./'):
+            parsed_clip = self._check_for_audition(clip)
+            primary_clips.append(parsed_clip)
+        
+        return primary_clips
+
+    def _get_connected_clips(self, primary_clips_list):
+        full_clips_list = primary_clips_list
+
+        for index, clip in enumerate(primary_clips_list):
+            connected_clips = [self._check_for_audition(clip) for clip in clip.iterfind('./[@lane]')]
+            full_clips_list[index:index] = connected_clips
+            # use index slicing here
+            # https://realpython.com/lessons/indexing-and-slicing/
+            # ex: list1 = [1, 2, 3] and list2 = [4, 5, 6]
+            # list1[1:1] = list2 would be [1, 4, 5, 6, 2, 3]
+            # starting at index 1 remove up to but not including index 1, then insert list2
+        
+        return full_clips_list
+
+    def _check_for_audition(self, clip_element):
+        if clip_element.tag == 'audition':
+            offset = clip_element.get('offset')
+            lane = clip_element.get('lane')
+
+            updated_clip = clip_element.find('./')
+            updated_clip.set('offset', offset)
+            if lane is not None:
+                updated_clip.set('lane', lane)
+                
+            return updated_clip
+        else:
+            return clip_element
 
     def parse_xml(self):
         self._create_resources(self.project_file)
