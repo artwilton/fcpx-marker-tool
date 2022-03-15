@@ -1,4 +1,5 @@
 from pathlib import Path
+import resource
 from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
 from common.timecodeinfo import TimecodeInfo
@@ -121,23 +122,22 @@ class FCPXParser:
 
         return event_child
 
-    def _handle_clip_creation(self, clip_element, event_clip=False):
+    def _handle_clip_creation(self, clip_element, event_clip=False, timeline_obj=None):
         name, duration, offset = helpers.get_attributes(clip_element, 'name', 'duration', 'offset')
         type = clip_element.tag
         
         if event_clip:
             frame_rate, start, non_drop_frame, resource_id = self._get_event_clip_format_info(clip_element)
         else:
-            frame_rate, start, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element)
+            frame_rate, start, non_drop_frame, resource_id = self._get_timeline_clip_format_info(clip_element, timeline_obj)
 
         timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame, offset)
 
         return Clip(name, type, timecode_info, resource_id)
 
     def _get_event_clip_format_info(self, clip_element):
-        resource_id, start, format = helpers.get_attributes(clip_element, 'ref', 'start', 'format')
-        if resource_id is None:
-            resource_id = clip_element.get('./ref')
+        start, format = helpers.get_attributes(clip_element, 'ref', 'start', 'format')
+        resource_id = self._get_resource_id(clip_element)
 
         if format:
             frame_rate = self._frame_rate_from_format(format)
@@ -147,8 +147,41 @@ class FCPXParser:
             
         return frame_rate, start, non_drop_frame, resource_id
 
-    def _get_timeline_clip_format_info(self, clip_element):
-        return frame_rate, non_drop_frame, resource_id
+    def _get_timeline_clip_format_info(self, clip_element, timeline_obj):
+        conform_rate = clip_element.find('./conform-rate')
+
+        if conform_rate is None or conform_rate.get('scaleEnabled') == 0:
+            frame_rate = timeline_obj.timecode_info.frame_rate
+            start
+            non_drop_frame = timeline_obj.timecode_info.non_drop_frame
+            resource_id = self._get_resource_id(clip_element)
+        elif conform_rate.get('scaleEnabled') == 1:
+            pass
+
+        return frame_rate, start, non_drop_frame, resource_id
+
+    def _get_resource_id(self, clip_element):
+        resource_id = clip_element.get('ref')
+
+        if resource_id is None:
+            # resource_id will be None if element is a 'gap' or 'sync-clip' so just return early
+            if clip_element.tag == 'gap' or clip_element.tag == 'sync-clip':
+                return resource_id
+
+            # Find the first child that is not a <conform-rate> element
+            clip_children = clip_element.findall('./')
+            if clip_children[0].tag != 'conform-rate':
+                clip_child = clip_children[0]
+            else:
+                clip_child = clip_children[1]
+
+            # Grab 'ref' based on if a clip is a 'video' element or a 'gap' with a nested 'audio' element
+            if clip_child.tag == 'video':
+                resource_id = clip_child.get('ref')
+            elif clip_child.find('./audio/[@ref]'):
+                resource_id = clip_child.find('./audio').get('ref')
+
+        return resource_id
 
     def _parse_ref_info(self, resource_id):
         # Find Resource with an id matching 'ref', grab the frame rate and tcformat from there.
@@ -190,6 +223,10 @@ class FCPXParser:
 
         # .iter() through the rest of the timeline, have function responsible for filtering clip metadata handling based on clip type
         # I can then either iterate through all of the gathered clips to grab markers, or figure out a way to handle it as I'm iterating through each line
+
+        # creating timeline clips:
+
+        # self._handle_clip_creation(clip_element, event_clip=False, timeline_frame_rate)
 
         return timeline
 
