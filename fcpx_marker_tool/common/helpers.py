@@ -30,5 +30,5 @@ def get_number_of_frames(rational_time_string, frame_rate_tuple):
     return number_of_frames
 
 def get_attributes(element, *args):
-    attribute_vale = [element.get(arg) for arg in args]
-    return attribute_vale
+    attribute_value = [element.get(arg) for arg in args]
+    return attribute_value
