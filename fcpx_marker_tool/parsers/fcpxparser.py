@@ -167,7 +167,8 @@ class FCPXParser:
         # Matches up values based on Apple's documentation:
         # https://developer.apple.com/documentation/professional_video_applications/fcpxml_reference/story_elements/conform-rate
 
-        conformed_frame_rate = ''
+        # making fps 25 for testing purposes until completed
+        conformed_frame_rate = '25'
 
         return conformed_frame_rate
 
@@ -222,63 +223,46 @@ class FCPXParser:
 
     # TIMELINES
     def _create_timeline(self, timeline_element):
-
-        clips_list = self._create_timeline_clip_list(timeline_element)
-
         # Grab metadata, create timeline instance
+        name, timecode_info = self._get_timeline_info(timeline_element)
+        timeline_obj = Timeline(name, timecode_info)
+        # create and add clip to timeline:
+        self._add_clips_to_timeline(timeline_element, timeline_obj)
+
+        return timeline_obj
+
+    def _get_timeline_info(self, timeline_element):
         name = timeline_element.get('name')
-        sequence = timeline_element.find('./sequence')
-        start, duration, format, non_drop_frame = helpers.get_attributes(sequence, 'tcStart','duration', 'format', 'tcFormat')
+        sequence_element = timeline_element.find('./sequence')
+        start, duration, format, non_drop_frame = helpers.get_attributes(sequence_element, 'tcStart','duration', 'format', 'tcFormat')
         frame_rate = self._frame_rate_from_format(format)
         timecode_info = self._create_timecode_info(frame_rate, start, duration, non_drop_frame)
+
+        return name, timecode_info
+
+    def _add_clips_to_timeline(self, timeline_element, timeline_obj):
+        timeline_clip_list = []
+
+        for clip in timeline_element.iterfind('./sequence/spine/'):
+            primary_clip = self._create_timeline_clip(clip, timeline_obj)
+            connected_clips = [self._create_timeline_clip(clip, timeline_obj) for clip in clip.iterfind('./[@lane]')]
+            timeline_clip_list.append(primary_clip)
+            timeline_clip_list.extend(connected_clips)
+
+        timeline_obj.clips = timeline_clip_list
+
+    def _create_timeline_clip(self, clip_element, timeline_obj):
+        frame_rate, non_drop_frame = timeline_obj.timecode_info.frame_rate, timeline_obj.timecode_info.non_drop_frame
+        clip = self._check_for_audition(clip_element)
+        clip_obj = self._handle_clip_creation(clip, timeline_obj, frame_rate, non_drop_frame)
         
-        timeline = Timeline(name, timecode_info)
-
-
-        # creating timeline clips:
-        for clip in clips_list:
-            parsed_clip = self._handle_clip_creation(clip, frame_rate, non_drop_frame)
-            Timeline.add_clip(parsed_clip)
-
-        return timeline
-
-    def _create_timeline_clip_list(self, timeline_element):
-
-        spine_element = timeline_element.find('./sequence/spine')
-        primary_clips = self._get_primary_clips(spine_element)
-        full_clips_list = self._get_connected_clips(primary_clips)
-
-        return full_clips_list
-
-    def _get_primary_clips(self, spine_element):
-        primary_clips = []
-        
-        for clip in spine_element.iterfind('./'):
-            parsed_clip = self._check_for_audition(clip)
-            primary_clips.append(parsed_clip)
-        
-        return primary_clips
-
-    def _get_connected_clips(self, primary_clips_list):
-        full_clips_list = primary_clips_list
-
-        for index, clip in enumerate(primary_clips_list):
-            connected_clips = [self._check_for_audition(clip) for clip in clip.iterfind('./[@lane]')]
-            full_clips_list[index:index] = connected_clips
-            # use index slicing here
-            # https://realpython.com/lessons/indexing-and-slicing/
-            # ex: list1 = [1, 2, 3] and list2 = [4, 5, 6]
-            # list1[1:1] = list2 would be [1, 4, 5, 6, 2, 3]
-            # starting at index 1 remove up to but not including index 1, then insert list2
-        
-        return full_clips_list
+        return clip_obj
 
     def _check_for_audition(self, clip_element):
         if clip_element.tag == 'audition':
-            offset = clip_element.get('offset')
-            lane = clip_element.get('lane')
-
+            offset, lane = helpers.get_attributes('offset', 'lane')
             updated_clip = clip_element.find('./')
+            
             updated_clip.set('offset', offset)
             if lane is not None:
                 updated_clip.set('lane', lane)
