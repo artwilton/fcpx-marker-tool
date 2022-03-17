@@ -84,15 +84,15 @@ class FCPXParser:
             frame_rate = (6000, 100)
         else:
             frame_rate = format_element.get('frameDuration')
-            frame_rate = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
 
         return frame_rate
 
     def _frame_rate_from_format(self, format):
         format_element = self.xml_root.find(f"./resources/format/[@id='{format}']")
         frame_rate = self._undefined_format_check(format_element)
+        frame_rate_tuple = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
         
-        return frame_rate
+        return frame_rate_tuple
             
     def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None, conformed_frame_rate=None):
         if conformed_frame_rate is None:
@@ -123,7 +123,7 @@ class FCPXParser:
         return event_child
 
     def _handle_clip_creation(self, clip_element, timeline_frame_rate=None, timeline_ndf=None, event_clip=False):
-        name, start, duration, offset = helpers.get_attributes(clip_element, 'start', 'name', 'duration', 'offset')
+        name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
         type = clip_element.tag
         resource_id = self._get_resource_id(clip_element)
         
@@ -253,8 +253,8 @@ class FCPXParser:
 
     def _create_timeline_clip(self, clip_element, timeline_obj):
         frame_rate, non_drop_frame = timeline_obj.timecode_info.frame_rate, timeline_obj.timecode_info.non_drop_frame
-        clip = self._check_for_audition(clip_element)
-        clip_obj = self._handle_clip_creation(clip, timeline_obj, frame_rate, non_drop_frame)
+        formatted_clip = self._check_for_audition(clip_element)
+        clip_obj = self._handle_clip_creation(formatted_clip, frame_rate, non_drop_frame)
         
         return clip_obj
 
@@ -275,8 +275,9 @@ class FCPXParser:
         self._create_resources(self.project_file)
         self._create_containers(self.project_file)
 
-        # return project_file
+        return self.project_file
 
-        resources = self.project_file.resources
-        for resource in resources:
-            print(f"{resource.name}, {resource.id}, {resource.timecode_info.frame_rate}")
+        # Tests
+        # resources = self.project_file.resources
+        # for resource in resources:
+        #     print(f"{resource.name}, {resource.id}, {resource.timecode_info.frame_rate}")
