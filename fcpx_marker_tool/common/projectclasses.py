@@ -84,5 +84,24 @@ class Clip:
 
 class Marker:
 
-    def __init__(self):
-        pass
+    def __init__(self, name, type, timecode_info, completed=None, metadata=None):
+        self.name = name
+        self.type = type
+        self.timecode_info = timecode_info
+        # completed is optional but will be used for FCPX to-do markers and must be a boolean
+        self.completed = completed
+        # metadata is optional but can be used for things like descriptions.
+        if metadata is not None:
+            self.metadata = metadata
+
+    @property
+    def completed(self):
+        return self._completed
+
+    @completed.setter
+    def completed(self, value):
+        if (self.type == "to-do") and (value is None):
+            raise ValueError(f"to-do markers must have a completed status set to 'True' or 'False'")
+        elif (value is not None) and (type(value) is not bool):
+            raise ValueError(f"completed must be set to True or False")
+        self._completed = value
