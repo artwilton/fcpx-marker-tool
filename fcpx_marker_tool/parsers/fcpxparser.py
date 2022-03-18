@@ -123,23 +123,27 @@ class FCPXParser:
         return event_child
 
     def _handle_clip_creation(self, clip_element, timeline_frame_rate=None, timeline_ndf=None, event_clip=False):
-        name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
-        type = clip_element.tag
-        resource_id = self._get_resource_id(clip_element)
-        
+        name, start, duration, offset, type, resource_id, conformed_frame_rate_tuple = self._get_common_clip_info(clip_element)
+
         if event_clip:
             frame_rate_tuple, non_drop_frame = self._get_event_clip_format_info(clip_element, resource_id)
-            conformed_frame_rate_tuple = None
         else:
-            frame_rate_tuple = timeline_frame_rate
-            non_drop_frame = timeline_ndf
-            conformed_frame_rate_tuple = self._get_timeline_clip_format_info(clip_element)
+            frame_rate_tuple, non_drop_frame = timeline_frame_rate, timeline_ndf
 
         timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset, conformed_frame_rate_tuple)
 
-        # create clip, then create markers
+        clip_obj = Clip(name, type, timecode_info, resource_id)
+        self._add_markers_to_clip(clip_obj)
 
-        return Clip(name, type, timecode_info, resource_id)
+        return clip_obj
+
+    def _get_common_clip_info(self, clip_element):
+        name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
+        type = clip_element.tag
+        resource_id = self._get_resource_id(clip_element)
+        conformed_frame_rate_tuple = self._conform_rate_check(clip_element)
+
+        return  name, start, duration, offset, type, resource_id, conformed_frame_rate_tuple
 
     def _get_event_clip_format_info(self, clip_element, resource_id):
         format = clip_element.get('format')
@@ -152,7 +156,7 @@ class FCPXParser:
             
         return frame_rate, non_drop_frame
 
-    def _get_timeline_clip_format_info(self, clip_element):
+    def _conform_rate_check(self, clip_element):
         conform_rate = clip_element.find('./conform-rate')
 
         if conform_rate is None:
@@ -271,6 +275,9 @@ class FCPXParser:
             return updated_clip
         else:
             return clip_element
+
+    def _add_markers_to_clip(self, clip_obj):
+        pass
 
     def parse_xml(self):
         self._create_resources(self.project_file)
