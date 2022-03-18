@@ -1,7 +1,6 @@
 from pathlib import Path
-import resource
 from common import helpers
-from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container
+from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker
 from common.timecodeinfo import TimecodeInfo
 
 class FCPXParser:
@@ -133,7 +132,7 @@ class FCPXParser:
         timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset, conformed_frame_rate_tuple)
 
         clip_obj = Clip(name, type, timecode_info, resource_id)
-        self._add_markers_to_clip(clip_obj)
+        self._add_markers_to_clip(clip_element, clip_obj, conformed_frame_rate_tuple)
 
         return clip_obj
 
@@ -276,8 +275,25 @@ class FCPXParser:
         else:
             return clip_element
 
-    def _add_markers_to_clip(self, clip_obj):
-        pass
+    def _add_markers_to_clip(self, clip_element, clip_obj, conformed_frame_rate_tuple):
+        for child_element in clip_element.iterfind('./'):
+            if child_element.tag.endswith('marker'):
+                marker = self._create_marker(child_element, clip_obj, conformed_frame_rate_tuple)
+                clip_obj.add_marker(marker)
+
+    def _create_marker(self, marker_element, clip_obj, conformed_frame_rate_tuple):
+        frame_rate_tuple, non_drop_frame = clip_obj.timecode_info.frame_rate, clip_obj.timecode_info.non_drop_frame
+        start, duration, name, completed, offset = helpers.get_attributes(marker_element, 'start', 'duration', 'value', 'completed', 'offset')
+
+        if completed is not None:
+            completed = bool(completed)
+            marker_type = "to-do"
+        else:
+            marker_type = marker_element.tag
+        
+        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset, conformed_frame_rate_tuple)
+
+        return Marker(name, marker_type, timecode_info, completed)
 
     def parse_xml(self):
         self._create_resources(self.project_file)
