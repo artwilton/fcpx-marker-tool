@@ -164,11 +164,11 @@ class FCPXParser:
     def _conform_rate_check(self, clip_element):
         conform_rate = clip_element.find('./conform-rate')
 
-        if conform_rate is None:
-           conformed_frame_rate = None
-        elif conform_rate.get('scaleEnabled') != "0" or conform_rate.get('scaleEnabled') is None:
+        if conform_rate is not None and conform_rate.get('scaleEnabled') != "0":
             source_frame_rate = conform_rate.get('srcFrameRate')
             conformed_frame_rate = self._parse_conformed_frame_rate(source_frame_rate)
+        else:
+            conformed_frame_rate = None
 
         return conformed_frame_rate
 
