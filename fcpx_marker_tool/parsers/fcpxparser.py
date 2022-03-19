@@ -128,9 +128,6 @@ class FCPXParser:
         clip_obj = self._create_clip(clip_element, timeline_obj, conformed_frame_rate_tuple, event_clip)
         self._add_markers_to_clip(clip_element, clip_obj, conformed_frame_rate_tuple)
 
-        if event_clip is False:
-            self._add_markers_to_timeline(timeline_obj, clip_obj)
-
         return clip_obj
 
     def _create_clip(self, clip_element, timeline_obj, conformed_frame_rate_tuple, event_clip=False):
@@ -169,7 +166,7 @@ class FCPXParser:
 
         if conform_rate is None:
            conformed_frame_rate = None
-        elif conform_rate.get('scaleEnabled') != 0 or conform_rate.get('scaleEnabled') is None:
+        elif conform_rate.get('scaleEnabled') != "0" or conform_rate.get('scaleEnabled') is None:
             source_frame_rate = conform_rate.get('srcFrameRate')
             conformed_frame_rate = self._parse_conformed_frame_rate(source_frame_rate)
 
@@ -239,7 +236,7 @@ class FCPXParser:
         # Grab metadata, create timeline instance
         name, timecode_info = self._get_timeline_info(timeline_element)
         timeline_obj = Timeline(name, timecode_info)
-        self._add_clips_and_markers_to_timeline(timeline_element, timeline_obj)
+        self._handle_timeline_clip_creation(timeline_element, timeline_obj)
 
         return timeline_obj
 
@@ -252,20 +249,29 @@ class FCPXParser:
 
         return name, timecode_info
 
-    def _add_clips_and_markers_to_timeline(self, timeline_element, timeline_obj):
+    def _add_clips_and_markers_to_timeline(self, timeline_obj, primary_clip, connected_clip=None):
+        if connected_clip:
+            clip_obj = connected_clip
+            clip_obj.timecode_info.offset += primary_clip.timecode_info.offset
+        else:
+            clip_obj = primary_clip
+
+        timeline_obj.add_clip(clip_obj)
+        self._add_markers_to_timeline(timeline_obj, clip_obj)
+
+    def _handle_timeline_clip_creation(self, timeline_element, timeline_obj):
 
         primary_clips = timeline_element.iterfind('./sequence/spine/')
         primary_clips_formatted = [self._check_for_audition(clip) for clip in primary_clips]
 
         for primary_clip in primary_clips_formatted:
             primary_clip_obj = self._handle_clip_and_marker_creation(primary_clip, timeline_obj)
-            timeline_obj.add_clip(primary_clip_obj)
+            self._add_clips_and_markers_to_timeline(timeline_obj, primary_clip_obj)
 
             for connected_clip in primary_clip.iterfind('*[@lane]'):
                 connected_clip_formatted = self._check_for_audition(connected_clip)
-                print("FOUND CONNECTED CLIP")
                 connected_clip_obj = self._handle_clip_and_marker_creation(connected_clip_formatted, timeline_obj)
-                timeline_obj.add_clip(connected_clip_obj)
+                self._add_clips_and_markers_to_timeline(timeline_obj, primary_clip_obj, connected_clip_obj)
 
     def _check_for_audition(self, clip_element):
         if clip_element.tag == 'audition':
@@ -311,7 +317,6 @@ class FCPXParser:
                 timeline_marker = copy.deepcopy(marker)
                 timeline_marker.timecode_info.start = marker_timeline_start
                 timeline_obj.add_marker(timeline_marker)
-                print(timeline_marker.timecode_info.start, marker_timeline_start)
 
     def parse_xml(self):
         self._create_resources(self.project_file)
