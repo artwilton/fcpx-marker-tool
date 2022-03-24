@@ -68,7 +68,7 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, type, timecode_info, track, resource_id=None):
+    def __init__(self, name, type, timecode_info, track, resource_id=None, interlaced=False):
         self.name = name
         self.type = type
         self.timecode_info = timecode_info
@@ -78,6 +78,7 @@ class Clip:
         # but it can be helpful for custom workflows where referencing the original timecode information is necessary.
         if resource_id is not None:
             self.resource_id = resource_id
+        self.interlaced = interlaced # boolean, True for progressive and False for interlaced
 
     def add_marker(self, marker):
         self.markers.append(marker)
