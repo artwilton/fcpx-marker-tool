@@ -18,7 +18,8 @@ class TimecodeInfo:
     @property
     def frame_rate_tuple(self):
         # method that will return a rational number tuple version regardless of how TimecodeInfo class is instantiated
-        pass
+        # for now it just returns frame_rate because the FCPX parser assigns frame_rate as a tuple
+        return self.frame_rate
 
     @property
     def standard_timecode(self):

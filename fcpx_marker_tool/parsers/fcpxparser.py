@@ -112,37 +112,48 @@ class FCPXParser:
         # parse clip and project elements, return an array of Clip and Timeline objects
         event_children = []
         for event_child in event:
-            event_children.append(self._filter_event_children(event_child))
+            event_children.append(self._parse_event_children(event_child))
         return event_children
     
-    def _filter_event_children(self, event_child):
+    def _parse_event_children(self, event_child):
         if event_child.tag.endswith('clip'):
-            event_child = self._handle_clip_and_marker_creation(event_child, event_clip=True)
+            parsed_event_child = self._handle_clip_and_marker_creation(event_child, event_clip=True)
         elif event_child.tag == 'project':
-            event_child = self._create_timeline(event_child)
+            parsed_event_child = self._create_timeline(event_child)
 
-        return event_child
+        return parsed_event_child
 
     def _handle_clip_and_marker_creation(self, clip_element, timeline_obj=None, event_clip=False):
-        conformed_frame_rate_tuple = self._conform_rate_check(clip_element)
-        clip_obj = self._create_clip(clip_element, timeline_obj, conformed_frame_rate_tuple, event_clip)
+        if event_clip:
+            clip_obj = self._create_event_clip(clip_element)
+            conformed_frame_rate_tuple = None
+        else:
+            timeline_frame_rate_tuple, timeline_ndf = timeline_obj.timecode_info.frame_rate_tuple, timeline_obj.timecode_info.non_drop_frame
+            conformed_frame_rate_tuple = self._conform_rate_check(clip_element, timeline_obj.timecode_info.frame_rate_number)
+            clip_obj = self._create_timeline_clip(clip_element, timeline_frame_rate_tuple, timeline_ndf, conformed_frame_rate_tuple)
+            
         self._add_markers_to_clip(clip_element, clip_obj, conformed_frame_rate_tuple)
 
         return clip_obj
 
-    def _create_clip(self, clip_element, timeline_obj, conformed_frame_rate_tuple, event_clip=False):
+    def _create_event_clip(self, clip_element):
         name, start, duration, offset, type, resource_id = self._get_common_clip_info(clip_element)
-
-        if event_clip:
-            frame_rate_tuple, non_drop_frame = self._get_event_clip_format_info(clip_element, resource_id)
-        else:
-            frame_rate_tuple, non_drop_frame = timeline_obj.timecode_info.frame_rate, timeline_obj.timecode_info.non_drop_frame
-
-        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset, conformed_frame_rate_tuple)
+        frame_rate_tuple, non_drop_frame = self._get_event_clip_format_info(clip_element, resource_id)
+        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset)
 
         clip_obj = Clip(name, type, timecode_info, resource_id)
 
         return clip_obj
+
+    def _create_timeline_clip(self, clip_element, timeline_frame_rate, timeline_ndf, conformed_frame_rate_tuple=None):
+        name, start, duration, offset, type, resource_id = self._get_common_clip_info(clip_element)
+        timecode_info = self._create_timecode_info(timeline_frame_rate, start, duration, timeline_ndf, offset, conformed_frame_rate_tuple)
+
+        clip_obj = Clip(name, type, timecode_info, resource_id)
+
+        return clip_obj
+
+
     def _get_common_clip_info(self, clip_element):
         name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
         type = clip_element.tag
@@ -161,24 +172,50 @@ class FCPXParser:
             
         return frame_rate, non_drop_frame
 
-    def _conform_rate_check(self, clip_element):
+    def _conform_rate_check(self, clip_element, timeline_frame_rate_number):
         conform_rate = clip_element.find('./conform-rate')
 
         if conform_rate is not None and conform_rate.get('scaleEnabled') != "0":
             source_frame_rate = conform_rate.get('srcFrameRate')
-            conformed_frame_rate = self._parse_conformed_frame_rate(source_frame_rate)
+            conformed_frame_rate = self._parse_conformed_frame_rate(timeline_frame_rate_number, source_frame_rate)
         else:
             conformed_frame_rate = None
 
         return conformed_frame_rate
 
-    def _parse_conformed_frame_rate(self, source_frame_rate):
+    def _parse_conformed_frame_rate(self, timeline_frame_rate_number, source_frame_rate):
         # Matches up values based on Apple's documentation:
         # https://developer.apple.com/documentation/professional_video_applications/fcpxml_reference/story_elements/conform-rate
 
         # making fps 25 for testing purposes until completed
-        conformed_frame_rate = '25'
+        # conformed_frame_rate = '25'
+        conformed_frame_rate = self._conform_rate_lookup(timeline_frame_rate_number, source_frame_rate)
         conformed_frame_rate_tuple = helpers.frame_rate_to_tuple(conformed_frame_rate)
+
+        return conformed_frame_rate_tuple
+
+    def _conform_rate_lookup(self, timeline_frame_rate, source_frame_rate):
+
+        CONFORM_RATE_DICTIONARY = {
+            # timeline_frame_rate: {source_frame_rate: conformed_frame_rate_tuple}
+            '23.98p': {'24': (2400, 100), '25': (2500, 100), '50': (2500, 100)},
+            '24p': {'23.98': (24000, 1001), '25': (2500, 100), '50': (2500, 100)},
+            '25p': {'23.98': (24000, 1001), '24': (2400, 100)},
+            '29.97p': {'30': (3000, 100), '60': (3000, 100)},
+            '30p': {'29.97': (30000, 1001), '59.94': (30000, 1001)},
+            '50p': {'23.98': (48000, 1001), '24': (4800, 100)},
+            '59.94p': {'30': (6000, 100), '60': (6000, 100)},
+            '60p': {'29.97': (60000, 1001), '59.94': (60000, 1001)},
+            '25i': {'23.98': (48000, 1001), '24': (4800, 100)},
+            '29.97i': {'30': (6000, 100), '60': (6000, 100)}
+        }
+
+        timeline_frame_rate_match = CONFORM_RATE_DICTIONARY.get(timeline_frame_rate)
+
+        if timeline_frame_rate_match is not None:
+            conformed_frame_rate_tuple = timeline_frame_rate_match.get(source_frame_rate)
+        else:
+            conformed_frame_rate_tuple = None
 
         return conformed_frame_rate_tuple
 
@@ -209,7 +246,7 @@ class FCPXParser:
         # Find Resource with an id matching 'ref', grab the frame rate and tcformat from there.
         for resource in self.project_file.resources:
             if resource.id == resource_id:
-                frame_rate = resource.timecode_info.frame_rate
+                frame_rate = resource.timecode_info.frame_rate_tuple
                 non_drop_frame = resource.timecode_info.non_drop_frame
                 break
 
@@ -293,7 +330,7 @@ class FCPXParser:
                 clip_obj.add_marker(marker)
 
     def _create_marker(self, marker_element, clip_obj, conformed_frame_rate_tuple):
-        frame_rate_tuple, non_drop_frame = clip_obj.timecode_info.frame_rate, clip_obj.timecode_info.non_drop_frame
+        frame_rate_tuple, non_drop_frame = clip_obj.timecode_info.frame_rate_tuple, clip_obj.timecode_info.non_drop_frame
         start, duration, name, completed, offset = helpers.get_attributes(marker_element, 'start', 'duration', 'value', 'completed', 'offset')
 
         if completed is not None:
