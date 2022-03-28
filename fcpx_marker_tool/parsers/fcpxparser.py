@@ -372,9 +372,10 @@ class FCPXParser:
             clip_end = clip_offset + clip_duration
             marker_timeline_start = (marker_start - clip_start) + clip_offset
 
-            if (marker_timeline_start >= clip_offset) and (marker_timeline_start <= clip_end):
+            if (marker_timeline_start >= clip_offset) and (marker_timeline_start < clip_end):
                 timeline_marker = copy.deepcopy(marker)
                 timeline_marker.timecode_info.start = marker_timeline_start
+                timeline_marker.timecode_info.frame_rate = timeline_obj.timecode_info.frame_rate
                 timeline_obj.add_marker(timeline_marker)
 
     def parse_xml(self):
