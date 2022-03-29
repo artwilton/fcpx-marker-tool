@@ -1,6 +1,6 @@
 import copy
+from fractions import Fraction
 from pathlib import Path
-from common import helpers
 from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker
 from common.timecodeinfo import TimecodeInfo
 
@@ -41,7 +41,7 @@ class FCPXParser:
             if resource.tag == 'asset' or resource.tag == 'media':
                 id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
                 frame_rate_tuple, interlaced = self._frame_info_from_format(format)
-                timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame)
+                timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset=0, non_drop_frame=non_drop_frame)
                 project_file.add_resource(Resource(id, name, path, timecode_info, interlaced))
 
     def _filter_resource_type(self, resource):
@@ -53,14 +53,14 @@ class FCPXParser:
         return resource
 
     def _handle_asset_resource(self, resource):
-        id, name, start, duration, format = helpers.get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
+        id, name, start, duration, format = self._get_attributes(resource, 'id', 'name', 'start', 'duration', 'format')
         path = resource.find('./media-rep').get('src')
         non_drop_frame = True # asset resources don't contain info about NDF or DF, so just assume NDF
          
         return id, name, path, start, duration, format, non_drop_frame
 
     def _handle_media_resource(self, resource):
-        id, name = helpers.get_attributes(resource, 'id', 'name')
+        id, name = self._get_attributes(resource, 'id', 'name')
         path = 'N/A'
         start, duration, format, non_drop_frame = self._filter_media_child_element(resource)
 
@@ -68,7 +68,7 @@ class FCPXParser:
 
     def _filter_media_child_element(self, resource):
         child_element = resource.find('./')
-        start, format, non_drop_frame = helpers.get_attributes(child_element, 'tcStart', 'format', 'tcFormat')
+        start, format, non_drop_frame = self._get_attributes(child_element, 'tcStart', 'format', 'tcFormat')
 
         if child_element.tag == 'multicam':
             duration = 0 # Multicam duration is not listed, can create logic later to determine this if necessary
@@ -84,7 +84,7 @@ class FCPXParser:
             frame_rate_tuple = (6000, 100)
         else:
             frame_rate = format_element.get('frameDuration')
-            frame_rate_tuple = helpers.frame_rate_to_tuple(frame_rate, reverse=True)
+            frame_rate_tuple = self._parse_frame_info(frame_rate, reverse=True)
 
         return frame_rate_tuple
 
@@ -108,21 +108,18 @@ class FCPXParser:
 
         return interlaced
 
-    def _create_timecode_info(self, frame_rate, start, duration, non_drop_frame=True, offset=None, timeline_frame_rate=None, conformed_frame_rate=None):
-        start_rate, duration_rate, offset_rate = (frame_rate,)*3
+    def _create_timecode_info(self, frame_rate, start, duration, offset, non_drop_frame=True, conformed_frame_rate=None):
         
-        if timeline_frame_rate is not None:
-            start_rate, duration_rate, offset_rate = (timeline_frame_rate,)*3
-        
+        start_tuple = self._parse_frame_info(start)
+        duration_tuple = self._parse_frame_info(duration)
+        offset_tuple = self._parse_frame_info(offset)
+
+        timecode_info = TimecodeInfo(frame_rate, start_tuple, duration_tuple, offset_tuple, non_drop_frame)
+
         if conformed_frame_rate is not None:
-            start_rate = conformed_frame_rate
-            
-        start = helpers.get_number_of_frames(start, start_rate)
-        duration = helpers.get_number_of_frames(duration, duration_rate)
-        offset = helpers.get_number_of_frames(offset, offset_rate)
-
-        timecode_info = TimecodeInfo(frame_rate, start, duration, non_drop_frame, offset)
-
+            updated_frame = TimecodeInfo.get_number_of_frames(start_tuple, conformed_frame_rate)
+            timecode_info.update_start_frame(updated_frame)
+        
         return timecode_info
 
     # EVENTS
@@ -167,11 +164,11 @@ class FCPXParser:
             timeline_frame_rate_tuple = timeline_obj.timecode_info.frame_rate_tuple
             timeline_interlaced = timeline_obj.interlaced
             conformed_frame_rate = self._conform_rate_check(clip_element, timeline_frame_rate_tuple, timeline_frame_rate_number, timeline_interlaced)
+            timecode_info = self._create_timecode_info(timeline_frame_rate_tuple, start, duration, offset, non_drop_frame, conformed_frame_rate)
+            timecode_info.update_frame_rate(frame_rate_tuple) # set frame_rate back to Clip frame rate after using Timeline frame rate for calculating start time
         else:
-            timeline_frame_rate_tuple = None
+            timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset, non_drop_frame)
             conformed_frame_rate = None
-
-        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset, timeline_frame_rate_tuple, conformed_frame_rate)
 
         clip_obj = Clip(name, type, timecode_info, interlaced, resource_id)
         self._add_markers_to_clip(clip_element, clip_obj, conformed_frame_rate)
@@ -179,7 +176,7 @@ class FCPXParser:
         return clip_obj
 
     def _get_common_clip_info(self, clip_element):
-        name, start, duration, offset = helpers.get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
+        name, start, duration, offset = self._get_attributes(clip_element, 'name', 'start', 'duration', 'offset')
         type = clip_element.tag
         resource_id = self._get_resource_id(clip_element)
         resource_id = self._validate_resource(resource_id)
@@ -302,16 +299,20 @@ class FCPXParser:
     def _get_timeline_info(self, timeline_element):
         name = timeline_element.get('name')
         sequence_element = timeline_element.find('./sequence')
-        start, duration, format, non_drop_frame = helpers.get_attributes(sequence_element, 'tcStart','duration', 'format', 'tcFormat')
+        start, duration, format, non_drop_frame = self._get_attributes(sequence_element, 'tcStart','duration', 'format', 'tcFormat')
         frame_rate_tuple, interlaced = self._frame_info_from_format(format)
-        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame)
+        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset=0, non_drop_frame=non_drop_frame)
 
         return name, timecode_info, interlaced
 
     def _add_clips_and_markers_to_timeline(self, timeline_obj, primary_clip, connected_clip=None):
         if connected_clip:
+            connected, primary = connected_clip.timecode_info, primary_clip.timecode_info
+            connected.offset = connected.offset + primary.offset - primary.start
+            connected_fraction = Fraction(*connected.offset_rational) + (Fraction(*primary.offset_rational) - Fraction(*primary.start_rational))
+            connected.offset_rational = (connected_fraction.numerator, connected_fraction.denominator)
             clip_obj = connected_clip
-            clip_obj.timecode_info.offset = clip_obj.timecode_info.offset + primary_clip.timecode_info.offset - primary_clip.timecode_info.start
+
         else:
             clip_obj = primary_clip
 
@@ -334,7 +335,7 @@ class FCPXParser:
 
     def _check_for_audition(self, clip_element):
         if clip_element.tag == 'audition':
-            offset, lane = helpers.get_attributes(clip_element, 'offset', 'lane')
+            offset, lane = self._get_attributes(clip_element, 'offset', 'lane')
             updated_clip = clip_element.find('./')
             
             updated_clip.set('offset', offset)
@@ -351,9 +352,9 @@ class FCPXParser:
                 marker = self._create_marker(child_element, clip_obj, conformed_frame_rate)
                 clip_obj.add_marker(marker)
 
-    def _create_marker(self, marker_element, clip_obj, conformed_frame_rate):
+    def _create_marker(self, marker_element, clip_obj, conformed_frame_rate=None):
         frame_rate_tuple, non_drop_frame = clip_obj.timecode_info.frame_rate_tuple, clip_obj.timecode_info.non_drop_frame
-        start, duration, name, completed, offset = helpers.get_attributes(marker_element, 'start', 'duration', 'value', 'completed', 'offset')
+        start, duration, name, completed, offset = self._get_attributes(marker_element, 'start', 'duration', 'value', 'completed', 'offset')
 
         if completed is not None:
             completed = bool(int(completed))
@@ -361,30 +362,57 @@ class FCPXParser:
         else:
             marker_type = marker_element.tag
         
-        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, non_drop_frame, offset, conformed_frame_rate=conformed_frame_rate)
+        timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset, non_drop_frame, conformed_frame_rate)
 
         return Marker(name, marker_type, timecode_info, completed)
 
     def _add_markers_to_timeline(self, timeline_obj, clip_obj):
         for marker in clip_obj.markers:
-            marker_start = marker.timecode_info.start
-            clip_start, clip_offset, clip_duration = clip_obj.timecode_info.start, clip_obj.timecode_info.offset, clip_obj.timecode_info.duration
-            clip_end = clip_offset + clip_duration
-            marker_timeline_start = (marker_start - clip_start) + clip_offset
+            marker_start_frame = marker.timecode_info.start
+            clip_time = clip_obj.timecode_info
+            clip_start_frame, clip_offset_frame = clip_time.start, clip_time.offset
+            marker_timeline_start_frame = (marker_start_frame - clip_start_frame) + clip_offset_frame
+            # compare rational time values for accuracy
+            clip_start_fraction, clip_offset_fraction, clip_duration_fraction = Fraction(*clip_time.start_rational), Fraction(*clip_time.offset_rational), Fraction(*clip_time.duration_rational)
+            clip_end_fraction = clip_offset_fraction + clip_duration_fraction
+            marker_start_fraction = Fraction(*marker.timecode_info.start_rational)
+            marker_timeline_start_fraction = (marker_start_fraction - clip_start_fraction) + clip_offset_fraction
 
-            if (marker_timeline_start >= clip_offset) and (marker_timeline_start < clip_end):
+            if (marker_timeline_start_fraction >= clip_offset_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
                 timeline_marker = copy.deepcopy(marker)
-                timeline_marker.timecode_info.start = marker_timeline_start
-                timeline_marker.timecode_info.frame_rate = timeline_obj.timecode_info.frame_rate
+                timeline_marker.timecode_info.update_start_frame(marker_timeline_start_frame)
+                timeline_marker.timecode_info.start_rational = (marker_timeline_start_fraction.numerator, marker_timeline_start_fraction.denominator)
+                timeline_marker.timecode_info.update_frame_rate(timeline_obj.timecode_info.frame_rate)
                 timeline_obj.add_marker(timeline_marker)
+
+
+    # HELPERS
+    def _parse_frame_info(self, frame_info, reverse=False):
+        # Preps frame info for timecode module, ex: the string "1001/30000s" becomes a tuple (30000, 1001) if reverse=True, while a string "10s" becomes (10,1)
+
+        # Handle typical ways that frame 0 is represented and return early. "0s" and None will be common in FCPX
+        if frame_info in {"0s", "0", 0, None}:
+            return (0,1)
+
+        frame_info_string = frame_info.replace("s", "")
+
+        if "/" in frame_info_string:
+            frame_info_tuple = tuple(map(int, frame_info_string.split("/")))
+            
+        else:
+            try:
+                frame_info_tuple = (int(frame_info_string), 1)
+            except ValueError:
+                raise ValueError("start, duration, and offset values must be set as either an integer or rational tuple")
+
+        return (frame_info_tuple[1], frame_info_tuple[0]) if reverse else frame_info_tuple
+
+    def _get_attributes(self, element, *args):
+        attribute_value = [element.get(arg) for arg in args]
+        return attribute_value
 
     def parse_xml(self):
         self._create_resources(self.project_file)
         self._create_containers(self.project_file)
 
         return self.project_file
-
-        # Tests
-        # resources = self.project_file.resources
-        # for resource in resources:
-        #     print(f"{resource.name}, {resource.id}, {resource.timecode_info.frame_rate}")
