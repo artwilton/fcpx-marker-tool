@@ -1,3 +1,6 @@
+from fractions import Fraction
+from timecode import Timecode
+
 class ProjectFile:
 
     def __init__(self, name, path):
@@ -70,9 +73,9 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, type, timecode_info, interlaced=False, resource_id=None, track=0):
+    def __init__(self, name, clip_type, timecode_info, interlaced=False, resource_id=None, track=0):
         self.name = name
-        self.type = type
+        self.clip_type = clip_type
         self.timecode_info = timecode_info
         self.interlaced = interlaced # boolean, True for progressive and False for interlaced
         # resource_id is optional. It isn't necessary for dealing with clips in timelines at a basic level,
@@ -104,6 +107,106 @@ class Marker:
     def completed(self, value):
         if (self.marker_type == "to-do") and (value is None):
             raise ValueError(f"to-do markers must have a completed status set to 'True' or 'False'")
-        elif (value is not None) and (type(value) is not bool):
+        elif (value is not None) and (isinstance(value, bool) is False):
             raise ValueError(f"completed must be set to True or False")
         self._completed = value
+
+class TimecodeFormat(Timecode):
+
+    def __init__(self, frame_rate, time_value, non_drop_frame=True):
+        self._frame_rate = frame_rate
+        self.frame, self.rational_tuple = self._time_value_helper(time_value)
+        super().__init__(frame_rate, frames=self.frame + 1, force_non_drop_frame=non_drop_frame)
+
+    @property
+    def frame(self):
+        return self._frame
+
+    @frame.setter
+    def frame(self, value):
+        if isinstance(value, int):
+            self._frame = value
+            self.frames = self.frame + 1
+        else:
+            raise ValueError("frame must be an int")
+
+    @property
+    def rational_tuple(self):
+        return self._rational_tuple
+
+    @rational_tuple.setter
+    def rational_tuple(self, value):
+        if isinstance(value, tuple):
+            self._rational_tuple = value
+        elif isinstance(value, Fraction):
+            self._rational_tuple = (value.numerator, value.denominator)
+        else:
+            raise ValueError("rational_tuple must be set as a Tuple or a Fraction")
+
+    @property
+    def rational_fraction(self):
+        return Fraction(*self.rational_tuple)
+
+    @property
+    def standard_timecode(self):
+        # returns standard format timecode as string, copied from Timecode __repr__
+        return self.tc_to_string(*self.frames_to_tc(self.frames))
+
+    @property
+    def fractional_timecode(self):
+        self.set_fractional(True)
+        fractional_output = self.tc_to_string(*self.frames_to_tc(self.frames))
+        self.set_fractional(False) #unset fractional timecode after grabbing output
+        return fractional_output
+
+    @classmethod
+    def get_number_of_frames(cls, rational_time_tuple, frame_rate_tuple):
+        number_of_frames = int((rational_time_tuple[0] * frame_rate_tuple[0]) / (rational_time_tuple[1] * frame_rate_tuple[1]))
+
+        return number_of_frames
+
+    def _time_value_helper(self, time_value):
+
+        if isinstance(time_value, int):
+            int_value = time_value
+            rational_value = (time_value * self._frame_rate[1], self._frame_rate[0])
+        elif isinstance(time_value, tuple):
+            int_value = self.get_number_of_frames(time_value, self._frame_rate)
+            rational_value = time_value
+        else:
+            raise ValueError("start, duration, and offset values must be set as either an integer or rational tuple")
+
+        return int_value, rational_value
+
+class TimecodeInfo:
+
+    def __init__(self, frame_rate, start, duration, offset=0, non_drop_frame=True):
+        self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
+        # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps.
+        self.start = TimecodeFormat(frame_rate, start, non_drop_frame) # Start time for video/audio element
+        self.duration = TimecodeFormat(frame_rate, duration, non_drop_frame) # Total length of time for video/audio element
+        self.offset = TimecodeFormat(frame_rate, offset, non_drop_frame) # Start time within a timeline, default is 0 since not everything has an offset
+        self.non_drop_frame = non_drop_frame # Boolean, True for NDF and False for DF
+        # start, duration, and offset can be set with an int (frames) or tuple (rational time).
+
+    @property
+    def frame_rate(self):
+        # return frame rate as tuple of ints, ex: (30000, 1001)
+        # need to create a setter that ensures frame_rate gets set as a tuple, but for now the FCPX parser already does this by default
+        return self._frame_rate
+
+    @frame_rate.setter
+    def frame_rate(self, value):
+        self._frame_rate = value
+
+    @property
+    def frame_rate_string(self):
+        # return SMPTE standard frame rate as a string, ex: '29.97'
+        return Timecode(self._frame_rate).framerate
+
+    @property
+    def format(self):
+        if self.non_drop_frame:
+            return 'NDF'
+        else:
+            return 'DF'
