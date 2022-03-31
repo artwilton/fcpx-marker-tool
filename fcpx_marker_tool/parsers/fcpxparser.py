@@ -1,8 +1,7 @@
 import copy
 from fractions import Fraction
 from pathlib import Path
-from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker
-from common.timecodeinfo import TimecodeInfo
+from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker, TimecodeInfo, TimecodeFormat
 
 class FCPXParser:
 
@@ -117,7 +116,7 @@ class FCPXParser:
         timecode_info = TimecodeInfo(frame_rate, start_tuple, duration_tuple, offset_tuple, non_drop_frame)
 
         if conformed_frame_rate is not None:
-            updated_frame = TimecodeInfo.get_number_of_frames(start_tuple, conformed_frame_rate)
+            updated_frame = TimecodeFormat.get_number_of_frames(start_tuple, conformed_frame_rate)
             timecode_info.update_start_frame(updated_frame)
         
         return timecode_info
@@ -139,13 +138,13 @@ class FCPXParser:
 
         return parsed_event_child
 
-    def _format_conformed_frame_rate(self, timeline_frame_rate_number, timeline_interlaced):
+    def _format_conformed_frame_rate(self, timeline_frame_rate_string, timeline_interlaced):
         if timeline_interlaced:
-            timeline_frame_rate_number += 'i'
+            timeline_frame_rate_string += 'i'
         else:
-            timeline_frame_rate_number += 'p'
+            timeline_frame_rate_string += 'p'
         
-        return timeline_frame_rate_number
+        return timeline_frame_rate_string
 
     def _validate_resource(self, resource_id):
         resource_element = self.xml_root.find(f"./resources/*[@id='{resource_id}']")
@@ -160,10 +159,10 @@ class FCPXParser:
         frame_rate_tuple, non_drop_frame, interlaced = self._get_clip_format_info(clip_element, resource_id, timeline_obj)
 
         if timeline_obj is not None:
-            timeline_frame_rate_number = timeline_obj.timecode_info.frame_rate_number
-            timeline_frame_rate_tuple = timeline_obj.timecode_info.frame_rate_tuple
+            timeline_frame_rate_string = timeline_obj.timecode_info.frame_rate_string
+            timeline_frame_rate_tuple = timeline_obj.timecode_info.frame_rate
             timeline_interlaced = timeline_obj.interlaced
-            conformed_frame_rate = self._conform_rate_check(clip_element, timeline_frame_rate_tuple, timeline_frame_rate_number, timeline_interlaced)
+            conformed_frame_rate = self._conform_rate_check(clip_element, timeline_frame_rate_tuple, timeline_frame_rate_string, timeline_interlaced)
             timecode_info = self._create_timecode_info(timeline_frame_rate_tuple, start, duration, offset, non_drop_frame, conformed_frame_rate)
             timecode_info.update_frame_rate(frame_rate_tuple) # set frame_rate back to Clip frame rate after using Timeline frame rate for calculating start time
         else:
@@ -192,18 +191,18 @@ class FCPXParser:
         elif resource_id is not None:
             frame_rate_tuple, non_drop_frame, interlaced = self._parse_ref_info(resource_id)
         else:
-            frame_rate_tuple = timeline_obj.timecode_info.frame_rate_tuple
+            frame_rate_tuple = timeline_obj.timecode_info.frame_rate
             non_drop_frame = timeline_obj.timecode_info.non_drop_frame
             interlaced = timeline_obj.interlaced
             
         return frame_rate_tuple, non_drop_frame, interlaced
 
-    def _conform_rate_check(self, clip_element, timeline_frame_rate_tuple, timeline_frame_rate_number, timeline_interlaced):
+    def _conform_rate_check(self, clip_element, timeline_frame_rate_tuple, timeline_frame_rate_string, timeline_interlaced):
         conform_rate = clip_element.find('./conform-rate')
 
         if conform_rate is not None and conform_rate.get('scaleEnabled') != "0":
             source_frame_rate = conform_rate.get('srcFrameRate')
-            timeline_frame_rate_formatted = self._format_conformed_frame_rate(timeline_frame_rate_number, timeline_interlaced)
+            timeline_frame_rate_formatted = self._format_conformed_frame_rate(timeline_frame_rate_string, timeline_interlaced)
             conformed_frame_rate = self._parse_conformed_frame_rate(timeline_frame_rate_formatted, source_frame_rate)
         else:
             conformed_frame_rate = timeline_frame_rate_tuple
@@ -264,7 +263,7 @@ class FCPXParser:
         # Find Resource with an id matching 'ref', grab the frame rate and tcformat from there.
         for resource in self.project_file.resources:
             if resource.id == resource_id:
-                frame_rate = resource.timecode_info.frame_rate_tuple
+                frame_rate = resource.timecode_info.frame_rate
                 non_drop_frame = resource.timecode_info.non_drop_frame
                 interlaced = resource.interlaced
                 break
@@ -353,7 +352,7 @@ class FCPXParser:
                 clip_obj.add_marker(marker)
 
     def _create_marker(self, marker_element, clip_obj, conformed_frame_rate=None):
-        frame_rate_tuple, non_drop_frame = clip_obj.timecode_info.frame_rate_tuple, clip_obj.timecode_info.non_drop_frame
+        frame_rate_tuple, non_drop_frame = clip_obj.timecode_info.frame_rate, clip_obj.timecode_info.non_drop_frame
         start, duration, name, completed, offset = self._get_attributes(marker_element, 'start', 'duration', 'value', 'completed', 'offset')
 
         if completed is not None:
