@@ -111,6 +111,39 @@ class Marker:
             raise ValueError(f"completed must be set to True or False")
         self._completed = value
 
+class TimecodeInfo:
+
+    def __init__(self, frame_rate, start, duration, offset=0, non_drop_frame=True):
+        self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
+        # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps.
+        self.start = TimecodeFormat(frame_rate, start, non_drop_frame) # Start time for video/audio element
+        self.duration = TimecodeFormat(frame_rate, duration, non_drop_frame) # Total length of time for video/audio element
+        self.offset = TimecodeFormat(frame_rate, offset, non_drop_frame) # Start time within a timeline, default is 0 since not everything has an offset
+        self.non_drop_frame = non_drop_frame # Boolean, True for NDF and False for DF
+        # start, duration, and offset can be set with an int (frames) or tuple (rational time).
+
+    @property
+    def frame_rate(self):
+        # return frame rate as tuple of ints, ex: (30000, 1001)
+        # need to create a setter that ensures frame_rate gets set as a tuple, but for now the FCPX parser already does this by default
+        return self._frame_rate
+
+    @frame_rate.setter
+    def frame_rate(self, value):
+        self._frame_rate = value
+
+    @property
+    def frame_rate_string(self):
+        # return SMPTE standard frame rate as a string, ex: '29.97'
+        return Timecode(self._frame_rate).framerate
+
+    @property
+    def format(self):
+        if self.non_drop_frame:
+            return 'NDF'
+        else:
+            return 'DF'
+
 class TimecodeFormat(Timecode):
 
     def __init__(self, frame_rate, time_value, non_drop_frame=True):
@@ -177,36 +210,3 @@ class TimecodeFormat(Timecode):
             raise ValueError("start, duration, and offset values must be set as either an integer or rational tuple")
 
         return int_value, rational_value
-
-class TimecodeInfo:
-
-    def __init__(self, frame_rate, start, duration, offset=0, non_drop_frame=True):
-        self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
-        # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps.
-        self.start = TimecodeFormat(frame_rate, start, non_drop_frame) # Start time for video/audio element
-        self.duration = TimecodeFormat(frame_rate, duration, non_drop_frame) # Total length of time for video/audio element
-        self.offset = TimecodeFormat(frame_rate, offset, non_drop_frame) # Start time within a timeline, default is 0 since not everything has an offset
-        self.non_drop_frame = non_drop_frame # Boolean, True for NDF and False for DF
-        # start, duration, and offset can be set with an int (frames) or tuple (rational time).
-
-    @property
-    def frame_rate(self):
-        # return frame rate as tuple of ints, ex: (30000, 1001)
-        # need to create a setter that ensures frame_rate gets set as a tuple, but for now the FCPX parser already does this by default
-        return self._frame_rate
-
-    @frame_rate.setter
-    def frame_rate(self, value):
-        self._frame_rate = value
-
-    @property
-    def frame_rate_string(self):
-        # return SMPTE standard frame rate as a string, ex: '29.97'
-        return Timecode(self._frame_rate).framerate
-
-    @property
-    def format(self):
-        if self.non_drop_frame:
-            return 'NDF'
-        else:
-            return 'DF'

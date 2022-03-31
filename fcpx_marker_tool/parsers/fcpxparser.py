@@ -116,8 +116,7 @@ class FCPXParser:
         timecode_info = TimecodeInfo(frame_rate, start_tuple, duration_tuple, offset_tuple, non_drop_frame)
 
         if conformed_frame_rate is not None:
-            updated_frame = TimecodeFormat.get_number_of_frames(start_tuple, conformed_frame_rate)
-            timecode_info.update_start_frame(updated_frame)
+            timecode_info.start = TimecodeFormat(conformed_frame_rate, start_tuple, non_drop_frame)
         
         return timecode_info
 
@@ -367,21 +366,18 @@ class FCPXParser:
 
     def _add_markers_to_timeline(self, timeline_obj, clip_obj):
         for marker in clip_obj.markers:
-            marker_start_frame = marker.timecode_info.start
-            clip_time = clip_obj.timecode_info
-            clip_start_frame, clip_offset_frame = clip_time.start, clip_time.offset
-            marker_timeline_start_frame = (marker_start_frame - clip_start_frame) + clip_offset_frame
+            clip_start, clip_offset, clip_duration = clip_obj.timecode_info.start, clip_obj.timecode_info.offset, clip_obj.timecode_info.duration
+            marker_start = marker.timecode_info.start
+            marker_timeline_start_frame = (marker_start.frame - clip_start.frame) + clip_offset.frame
             # compare rational time values for accuracy
-            clip_start_fraction, clip_offset_fraction, clip_duration_fraction = Fraction(*clip_time.start_rational), Fraction(*clip_time.offset_rational), Fraction(*clip_time.duration_rational)
-            clip_end_fraction = clip_offset_fraction + clip_duration_fraction
-            marker_start_fraction = Fraction(*marker.timecode_info.start_rational)
-            marker_timeline_start_fraction = (marker_start_fraction - clip_start_fraction) + clip_offset_fraction
+            clip_end_fraction = clip_offset.rational_fraction + clip_duration.rational_fraction
+            marker_timeline_start_fraction = (marker_start.rational_fraction - clip_start.rational_fraction) + clip_offset.rational_fraction
 
-            if (marker_timeline_start_fraction >= clip_offset_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
+            if (marker_timeline_start_fraction >= clip_offset.rational_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
                 timeline_marker = copy.deepcopy(marker)
-                timeline_marker.timecode_info.update_start_frame(marker_timeline_start_frame)
-                timeline_marker.timecode_info.start_rational = (marker_timeline_start_fraction.numerator, marker_timeline_start_fraction.denominator)
-                timeline_marker.timecode_info.update_frame_rate(timeline_obj.timecode_info.frame_rate)
+                new_frame_rate, non_drop_frame = timeline_obj.timecode_info.frame_rate, timeline_obj.timecode_info.non_drop_frame
+                timeline_marker.timecode_info.start = TimecodeFormat(new_frame_rate, marker_timeline_start_frame, non_drop_frame)
+                timeline_marker.timecode_info.start.rational_tuple = (marker_timeline_start_fraction.numerator, marker_timeline_start_fraction.denominator)
                 timeline_obj.add_marker(timeline_marker)
 
 
