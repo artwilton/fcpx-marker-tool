@@ -45,7 +45,7 @@ class TimecodeInfo:
 
     @start.setter
     def start(self, value):
-        self._start = RationalTime(self._check_for_tuple(value))
+        self._start = RationalTime(*self._check_for_tuple(value))
 
     @property
     def duration(self):
@@ -53,7 +53,7 @@ class TimecodeInfo:
 
     @duration.setter
     def duration(self, value):
-        self._duration = RationalTime(self._check_for_tuple(value))
+        self._duration = RationalTime(*self._check_for_tuple(value))
 
     @property
     def offset(self):
@@ -61,7 +61,7 @@ class TimecodeInfo:
 
     @offset.setter
     def offset(self, value):
-        self._offset = RationalTime(self._check_for_tuple(value))
+        self._offset = RationalTime(*self._check_for_tuple(value))
 
     @property
     def format(self):
@@ -70,9 +70,13 @@ class TimecodeInfo:
         else:
             return 'DF'
 
+    @property
+    def conform_rate_check(self):
+        return False if self.conformed_frame_rate is None else True
+
     def _check_for_tuple(self, time_value):
 
-        frame_rate = self.frame_rate if self.conformed_frame_rate is None else self.conformed_frame_rate
+        frame_rate = self.conformed_frame_rate if self.conform_rate_check else self.frame_rate
 
         if isinstance(time_value, int):
             rational_value = (time_value * frame_rate[1], frame_rate[0])

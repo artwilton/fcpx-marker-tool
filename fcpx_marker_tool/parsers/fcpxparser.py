@@ -108,13 +108,13 @@ class FCPXParser:
 
         return interlaced
 
-    def _create_timecode_info(self, frame_rate, start, duration, offset, non_drop_frame=True):
+    def _create_timecode_info(self, frame_rate, start, duration, offset, non_drop_frame=True, conformed_frame_rate=None):
         
         start_tuple = self._parse_frame_info(start)
         duration_tuple = self._parse_frame_info(duration)
         offset_tuple = self._parse_frame_info(offset)
 
-        timecode_info = TimecodeInfo(frame_rate, start_tuple, duration_tuple, offset_tuple, non_drop_frame)
+        timecode_info = TimecodeInfo(frame_rate, start_tuple, duration_tuple, offset_tuple, non_drop_frame, conformed_frame_rate)
         
         return timecode_info
 
@@ -304,9 +304,7 @@ class FCPXParser:
     def _add_clips_and_markers_to_timeline(self, timeline_obj, primary_clip, connected_clip=None):
         if connected_clip:
             connected, primary = connected_clip.timecode_info, primary_clip.timecode_info
-            connected.offset.frame = connected.offset.frame + primary.offset.frame - primary.start.frame
-            connected_fraction = connected.offset.rational_fraction + (primary.offset.rational_fraction - primary.start.rational_fraction)
-            connected.offset.rational_tuple = (connected_fraction.numerator, connected_fraction.denominator)
+            connected.offset = connected.offset.as_fraction + primary.offset.as_fraction - primary.start.as_fraction
             clip_obj = connected_clip
 
         else:
@@ -365,16 +363,21 @@ class FCPXParser:
     def _add_markers_to_timeline(self, timeline_obj, clip_obj):
         for marker in clip_obj.markers:
             clip_start, clip_offset, clip_duration = clip_obj.timecode_info.start, clip_obj.timecode_info.offset, clip_obj.timecode_info.duration
-            marker_start = marker.timecode_info.start
+            timeline_rate = Fraction(*timeline_obj.timecode_info.frame_rate)
+            marker_rate = Fraction(*marker.timecode_info.conformed_frame_rate) if marker.timecode_info.conform_rate_check else timeline_rate
+            clip_rate = Fraction(*clip_obj.timecode_info.conformed_frame_rate) if clip_obj.timecode_info.conform_rate_check else timeline_rate
+            marker_start_fraction = marker.timecode_info.start.as_fraction * marker_rate
+            clip_start_fraction = clip_start.as_fraction * clip_rate
+            clip_offset_fraction = clip_offset.as_fraction * timeline_rate
             # compare rational time values for accuracy when dealing with markers on a subframe level
-            clip_end_fraction = clip_offset.as_fraction + clip_duration.as_fraction
-            marker_timeline_start_fraction = (marker_start.as_fraction - clip_start.as_fraction) + clip_offset.as_fraction
+            clip_end_fraction = clip_offset_fraction + (clip_duration.as_fraction * timeline_rate)
+            frame_duration = Fraction(timeline_rate.denominator, timeline_rate.numerator)
+            marker_timeline_start_fraction = ((marker_start_fraction - clip_start_fraction) + clip_offset_fraction)
 
-            if (marker_timeline_start_fraction >= clip_offset.as_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
+            if (marker_timeline_start_fraction >= clip_offset_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
                 timeline_marker = copy.deepcopy(marker)
                 t_marker, t_obj = timeline_marker.timecode_info, timeline_obj.timecode_info
-                t_marker.frame_rate, t_marker.non_drop_frame, t_marker.conformed_frame_rate  = t_obj.frame_rate, t_obj.non_drop_frame, None
-                t_marker.start = (marker_timeline_start_fraction)
+                t_marker.frame_rate, t_marker.non_drop_frame, t_marker.start = t_obj.frame_rate, t_obj.non_drop_frame, (marker_timeline_start_fraction * frame_duration)
                 timeline_obj.add_marker(timeline_marker)
 
     # HELPERS
