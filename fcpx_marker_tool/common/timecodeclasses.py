@@ -4,9 +4,10 @@ from timecode import Timecode
 
 class TimecodeInfo:
 
-    def __init__(self, frame_rate, start, duration, offset=0, non_drop_frame=True):
+    def __init__(self, frame_rate, start, duration, offset=0, non_drop_frame=True, conformed_frame_rate=None):
         self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
         # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps.
+        self.conformed_frame_rate = conformed_frame_rate # Optional, but NLEs like FCPX will sometimes calculate frame number based on a conformed frame rate
         self.start = start # Start time for video/audio element
         self.duration = duration # Total length of time for video/audio element
         self.offset = offset # Start time within a timeline, default is 0 since not everything has an offset
@@ -22,6 +23,16 @@ class TimecodeInfo:
     @frame_rate.setter
     def frame_rate(self, value):
         self._frame_rate = value
+
+    @property
+    def conformed_frame_rate(self):
+        # return conformed frame rate as tuple of ints, ex: (30000, 1001)
+        # need to create a setter that ensures conformed_frame_rate gets set as a tuple, but for now the FCPX parser already does this by default
+        return self._conformed_frame_rate
+
+    @conformed_frame_rate.setter
+    def conformed_frame_rate(self, value):
+        self._conformed_frame_rate = value
 
     @property
     def frame_rate_string(self):
@@ -61,8 +72,10 @@ class TimecodeInfo:
 
     def _check_for_tuple(self, time_value):
 
+        frame_rate = self.frame_rate if self.conformed_frame_rate is None else self.conformed_frame_rate
+
         if isinstance(time_value, int):
-            rational_value = (time_value * self._frame_rate[1], self._frame_rate[0])
+            rational_value = (time_value * frame_rate[1], frame_rate[0])
         elif isinstance(time_value, tuple):
             rational_value = time_value
         else:
