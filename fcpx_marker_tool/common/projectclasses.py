@@ -117,9 +117,9 @@ class TimecodeInfo:
     def __init__(self, frame_rate, start, duration, offset=0, non_drop_frame=True):
         self.frame_rate = frame_rate # can be rational string like '30000/1001', rational tuple (30000, 1001), int 30, or float 29.97
         # as notated in the Timecode module, frame_rate should be one of ['23.976', '23.98', '24', '25', '29.97', '30', '50', '59.94', '60', 'NUMERATOR/DENOMINATOR', ms'] where "ms" is equal to 1000 fps.
-        self.start = TimecodeFormat(frame_rate, start, non_drop_frame) # Start time for video/audio element
-        self.duration = TimecodeFormat(frame_rate, duration, non_drop_frame) # Total length of time for video/audio element
-        self.offset = TimecodeFormat(frame_rate, offset, non_drop_frame) # Start time within a timeline, default is 0 since not everything has an offset
+        self.start = start # Start time for video/audio element
+        self.duration = duration # Total length of time for video/audio element
+        self.offset = offset # Start time within a timeline, default is 0 since not everything has an offset
         self.non_drop_frame = non_drop_frame # Boolean, True for NDF and False for DF
         # start, duration, and offset can be set with an int (frames) or tuple (rational time).
 
@@ -137,6 +137,30 @@ class TimecodeInfo:
     def frame_rate_string(self):
         # return SMPTE standard frame rate as a string, ex: '29.97'
         return Timecode(self._frame_rate).framerate
+        
+    @property
+    def start(self):
+        return self._start
+
+    @start.setter
+    def start(self, value):
+        self._start = RationalTime(self._check_for_tuple(value))
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, value):
+        self._duration = RationalTime(self._check_for_tuple(value))
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = RationalTime(self._check_for_tuple(value))
 
     @property
     def format(self):
@@ -144,6 +168,17 @@ class TimecodeInfo:
             return 'NDF'
         else:
             return 'DF'
+
+    def _check_for_tuple(self, time_value):
+
+        if isinstance(time_value, int):
+            rational_value = (time_value * self._frame_rate[1], self._frame_rate[0])
+        elif isinstance(time_value, tuple):
+            rational_value = time_value
+        else:
+            raise ValueError("start, duration, and offset values must be set as either an integer or rational tuple")
+
+        return rational_value
 
 class RationalTime(NamedTuple):
     numerator: int
@@ -224,16 +259,3 @@ class TimecodeFormat(Timecode):
         number_of_frames = int((rational_time_tuple[0] * frame_rate_tuple[0]) / (rational_time_tuple[1] * frame_rate_tuple[1]))
 
         return number_of_frames
-
-    def _time_value_helper(self, time_value):
-
-        if isinstance(time_value, int):
-            int_value = time_value
-            rational_value = (time_value * self._frame_rate[1], self._frame_rate[0])
-        elif isinstance(time_value, tuple):
-            int_value = self.get_number_of_frames(time_value, self._frame_rate)
-            rational_value = time_value
-        else:
-            raise ValueError("start, duration, and offset values must be set as either an integer or rational tuple")
-
-        return int_value, rational_value
