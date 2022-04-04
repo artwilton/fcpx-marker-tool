@@ -1,5 +1,6 @@
 from fractions import Fraction
 from timecode import Timecode
+from typing import NamedTuple
 
 class ProjectFile:
 
@@ -143,6 +144,32 @@ class TimecodeInfo:
             return 'NDF'
         else:
             return 'DF'
+
+class RationalTime(NamedTuple):
+    numerator: int
+    denominator: int
+
+    @property
+    def as_frame(self, frame_rate):
+        frame = int((self.numerator * frame_rate[0]) / (self.denominator * frame_rate[1]))
+        return frame
+
+    @property
+    def as_fraction(self):
+        return Fraction(*self)
+
+    @property
+    def as_timecode(self, frame_rate, non_drop_frame=True):
+        return self._create_timecode_obj(frame_rate, non_drop_frame).tc_to_string
+
+    @property
+    def as_fractional_timecode(self, frame_rate, non_drop_frame=True):
+        self._create_timecode_obj(frame_rate, non_drop_frame).set_fractional(True)
+        fractional_output = self.tc_to_string(*self.frames_to_tc(self.frames))
+        return fractional_output
+
+    def _create_timecode_obj(self, frame_rate, non_drop_frame):
+        return Timecode(frame_rate, frames=self.as_frame + 1, force_non_drop_frame=non_drop_frame)
 
 class TimecodeFormat(Timecode):
 
