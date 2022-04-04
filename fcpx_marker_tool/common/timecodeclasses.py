@@ -78,8 +78,10 @@ class TimecodeInfo:
             rational_value = (time_value * frame_rate[1], frame_rate[0])
         elif isinstance(time_value, tuple):
             rational_value = time_value
+        elif isinstance(time_value, Fraction):
+            rational_value = (time_value.numerator, time_value.denominator)
         else:
-            raise ValueError("start, duration, and offset values must be set as either an integer or rational tuple")
+            raise ValueError("start, duration, and offset values must be set as an integer, rational tuple, rational fraction")
 
         return rational_value
 
@@ -88,26 +90,28 @@ class RationalTime(NamedTuple):
     denominator: int
 
     @property
+    def as_fraction(self):
+        return Fraction(*self)
+
     def as_frame(self, frame_rate):
         frame = int((self.numerator * frame_rate[0]) / (self.denominator * frame_rate[1]))
         return frame
 
-    @property
-    def as_fraction(self):
-        return Fraction(*self)
-
-    @property
     def as_timecode(self, frame_rate, non_drop_frame=True):
         return self._create_timecode_obj(frame_rate, non_drop_frame).tc_to_string
 
-    @property
     def as_fractional_timecode(self, frame_rate, non_drop_frame=True):
         self._create_timecode_obj(frame_rate, non_drop_frame).set_fractional(True)
         fractional_output = self.tc_to_string(*self.frames_to_tc(self.frames))
         return fractional_output
 
     def _create_timecode_obj(self, frame_rate, non_drop_frame):
-        return Timecode(frame_rate, frames=self.as_frame + 1, force_non_drop_frame=non_drop_frame)
+        return Timecode(frame_rate, frames=self.as_frame(frame_rate) + 1, force_non_drop_frame=non_drop_frame)
+
+test_rational = RationalTime(1001, 30000)
+test_rational.as_timecode((30000, 1001))
+print(test_rational)
+
 
 # TEMP CLASS FOR REFERENCE
 class TimecodeFormat(Timecode):
