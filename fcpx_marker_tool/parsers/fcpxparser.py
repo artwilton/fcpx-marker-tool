@@ -1,7 +1,8 @@
 import copy
 from fractions import Fraction
 from pathlib import Path
-from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker, TimecodeInfo, TimecodeFormat
+from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker
+from common.timecodeclasses import TimecodeInfo
 
 class FCPXParser:
 
@@ -107,16 +108,13 @@ class FCPXParser:
 
         return interlaced
 
-    def _create_timecode_info(self, frame_rate, start, duration, offset, non_drop_frame=True, conformed_frame_rate=None):
+    def _create_timecode_info(self, frame_rate, start, duration, offset, non_drop_frame=True):
         
         start_tuple = self._parse_frame_info(start)
         duration_tuple = self._parse_frame_info(duration)
         offset_tuple = self._parse_frame_info(offset)
 
         timecode_info = TimecodeInfo(frame_rate, start_tuple, duration_tuple, offset_tuple, non_drop_frame)
-
-        if conformed_frame_rate is not None:
-            timecode_info.start = TimecodeFormat(conformed_frame_rate, start_tuple, non_drop_frame)
         
         return timecode_info
 
