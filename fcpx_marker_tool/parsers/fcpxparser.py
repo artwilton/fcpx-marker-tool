@@ -366,17 +366,15 @@ class FCPXParser:
         for marker in clip_obj.markers:
             clip_start, clip_offset, clip_duration = clip_obj.timecode_info.start, clip_obj.timecode_info.offset, clip_obj.timecode_info.duration
             marker_start = marker.timecode_info.start
-            marker_timeline_start_frame = (marker_start.frame - clip_start.frame) + clip_offset.frame
             # compare rational time values for accuracy when dealing with markers on a subframe level
-            clip_end_fraction = clip_offset.rational_fraction + clip_duration.rational_fraction
-            marker_timeline_start_fraction = (marker_start.rational_fraction - clip_start.rational_fraction) + clip_offset.rational_fraction
+            clip_end_fraction = clip_offset.as_fraction + clip_duration.as_fraction
+            marker_timeline_start_fraction = (marker_start.as_fraction - clip_start.as_fraction) + clip_offset.as_fraction
 
-            if (marker_timeline_start_fraction >= clip_offset.rational_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
+            if (marker_timeline_start_fraction >= clip_offset.as_fraction) and (marker_timeline_start_fraction < clip_end_fraction):
                 timeline_marker = copy.deepcopy(marker)
-                new_frame_rate, non_drop_frame = timeline_obj.timecode_info.frame_rate, timeline_obj.timecode_info.non_drop_frame
-                timeline_marker.timecode_info.frame_rate = new_frame_rate
-                timeline_marker.timecode_info.start = TimecodeFormat(new_frame_rate, marker_timeline_start_frame, non_drop_frame)
-                timeline_marker.timecode_info.start.rational_tuple = (marker_timeline_start_fraction.numerator, marker_timeline_start_fraction.denominator)
+                t_marker, t_obj = timeline_marker.timecode_info, timeline_obj.timecode_info
+                t_marker.frame_rate, t_marker.non_drop_frame, t_marker.conformed_frame_rate  = t_obj.frame_rate, t_obj.non_drop_frame, None
+                t_marker.start = (marker_timeline_start_fraction)
                 timeline_obj.add_marker(timeline_marker)
 
     # HELPERS

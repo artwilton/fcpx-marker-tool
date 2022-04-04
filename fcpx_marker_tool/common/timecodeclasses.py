@@ -108,11 +108,6 @@ class RationalTime(NamedTuple):
     def _create_timecode_obj(self, frame_rate, non_drop_frame):
         return Timecode(frame_rate, frames=self.as_frame(frame_rate) + 1, force_non_drop_frame=non_drop_frame)
 
-test_rational = RationalTime(1001, 30000)
-test_rational.as_timecode((30000, 1001))
-print(test_rational)
-
-
 # TEMP CLASS FOR REFERENCE
 class TimecodeFormat(Timecode):
 
