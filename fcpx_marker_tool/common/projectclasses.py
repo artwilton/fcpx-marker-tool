@@ -2,10 +2,14 @@ from pathlib import PurePath
 
 class ProjectFile:
 
-    def __init__(self, name, file_path, project_path):
+    def __init__(self, name, file_path, project_path=None):
         self.name = name
         self.file_path = file_path
-        self.project_path = project_path
+        # project_path is optional because it's assumed it will be the project name, should be the root for clip and timeline project paths
+        if project_path is None:
+            self.project_path = self.name
+        else:
+            self.project_path = project_path
         self.resources = []
         self.items = [] # list of clip and/or timeline objects in project
         self.root_container = Container(name)
@@ -77,12 +81,21 @@ class Container:
 
 class Timeline:
 
-    def __init__(self, name, timecode_info, interlaced=False):
+    def __init__(self, name, timecode_info, project_path, interlaced=False):
         self.name = name
         self.timecode_info = timecode_info
+        self.project_path = project_path
         self.interlaced = interlaced # boolean, True for progressive and False for interlaced
         self.clips = []
         self.markers = []
+
+    @property
+    def project_path(self):
+        return self._project_path
+
+    @project_path.setter
+    def project_path(self, value):
+        self._project_path = value if isinstance(value, PurePath) else PurePath(value)
 
     def add_clip(self, clip):
         self.clips.append(clip)
@@ -92,10 +105,11 @@ class Timeline:
 
 class Clip:
 
-    def __init__(self, name, clip_type, timecode_info, interlaced=False, resource_id=None, track=0):
+    def __init__(self, name, clip_type, timecode_info, project_path, interlaced=False, resource_id=None, track=0):
         self.name = name
         self.clip_type = clip_type
         self.timecode_info = timecode_info
+        self.project_path = project_path
         self.interlaced = interlaced # boolean, True for progressive and False for interlaced
         # resource_id is optional. It isn't necessary for dealing with clips in timelines at a basic level,
         # but it can be helpful for custom workflows where referencing the original timecode information is necessary.
@@ -103,6 +117,14 @@ class Clip:
             self.resource_id = resource_id
         self.track = track
         self.markers = []
+
+    @property
+    def project_path(self):
+        return self._project_path
+
+    @project_path.setter
+    def project_path(self, value):
+        self._project_path = value if isinstance(value, PurePath) else PurePath(value)
 
     def add_marker(self, marker):
         self.markers.append(marker)
