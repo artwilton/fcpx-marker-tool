@@ -1,26 +1,48 @@
+from pathlib import PurePath
+
 class ProjectFile:
 
-    def __init__(self, name, path):
+    def __init__(self, name, file_path, project_path):
         self.name = name
-        self.path = path
+        self.file_path = file_path
+        self.project_path = project_path
         self.resources = []
+        self.items = [] # list of clip and/or timeline objects in project
         self.root_container = Container(name)
 
+    @property
+    def project_path(self):
+        return self._project_path
+
+    @project_path.setter
+    def project_path(self, value):
+        self._project_path = PurePath(value)
+
+    def add_item(self, item):
+        if isinstance(item, (Clip, Timeline)):
+            self.items.append(item)
+        else:
+            raise ValueError("ProjectFile items must be either Clip or Timeline objects")
+
     def add_resource(self, resource):
-        self.resources.append(resource)  
+        if isinstance(resource, Resource):
+            self.resources.append(resource)
+        else:
+            raise ValueError("Not a valid Resource object")
+    
+    def get_clips(self):
+        return [item for item in self.items if isinstance(item, Clip)]
 
     def get_timelines(self):
-        timelines = []
-        # recursively grab timelines from self.root_container
-        return timelines
+        return [item for item in self.items if isinstance(item, Timeline)]
 
 class Resource:
     """Allows for shared characteristics between multiple types of xml imports"""
     
-    def __init__(self, id, name, path, timecode_info, interlaced=False):
+    def __init__(self, id, name, file_path, timecode_info, interlaced=False):
         self.id = id
         self.name = name
-        self.path = path # for anything that's not a file like compound clips, this can be labeled as something like "internal"
+        self.file_path = file_path # for anything that's not a file like compound clips, this can be labeled as something like "internal"
         self.timecode_info = timecode_info # TimecodeInfo class object
         self.interlaced = interlaced # boolean, True for progressive and False for interlaced
 
@@ -51,7 +73,7 @@ class Container:
                 # level += 1
                 cls._recursive_container(child, level + 1)
             else:
-                print(f"{'------' * level}{child}")
+                print(f"{'------' * level}{child.name}")
 
 class Timeline:
 
@@ -103,7 +125,7 @@ class Marker:
     @completed.setter
     def completed(self, value):
         if (self.marker_type == "to-do") and (value is None):
-            raise ValueError(f"to-do markers must have a completed status set to 'True' or 'False'")
+            raise ValueError("to-do markers must have a completed status set to 'True' or 'False'")
         elif (value is not None) and (isinstance(value, bool) is False):
-            raise ValueError(f"completed must be set to True or False")
+            raise ValueError("completed must be set to True or False")
         self._completed = value
