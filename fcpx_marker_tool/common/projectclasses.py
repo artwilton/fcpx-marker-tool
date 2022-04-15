@@ -11,7 +11,7 @@ class ProjectFile:
         else:
             self.project_path = project_path
         self.resources = []
-        self.items = [] # list of clip and/or timeline objects in project
+        self.items = [] # list of clip and/or timeline objects found in project
         self.root_container = Container(name)
 
     @property
@@ -39,6 +39,18 @@ class ProjectFile:
 
     def get_timelines(self):
         return [item for item in self.items if isinstance(item, Timeline)]
+
+    def _create_nested_directory(self, project_items):
+        nested_directory = {}
+
+        def set_nested_keys(dictionary, keys, value):
+            for key in keys[:-1]:
+                dictionary = dictionary.setdefault(key, {})
+            dictionary[keys[-1]] = value
+
+        for id, item in enumerate(project_items):
+            parts = [*item.project_path.parts, id]
+            set_nested_keys(nested_directory, parts, item)
 
 class Resource:
     """Allows for shared characteristics between multiple types of xml imports"""
