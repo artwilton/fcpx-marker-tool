@@ -40,17 +40,30 @@ class ProjectFile:
     def get_timelines(self):
         return [item for item in self.items if isinstance(item, Timeline)]
 
-    def _create_nested_directory(self, project_items):
-        nested_directory = {}
+    def get_nested_items(self, project_items):
+        # returns a dictionary of items nested based on their project path, the key for each item object will be its index number in self.items
+        # ex: {'Folder': {1: <item_obj_1>, 2: <item_obj_2>, 'Subfolder': {3: <item_obj_3>}}}
+        nested_items_dict = {}
 
         def set_nested_keys(dictionary, keys, value):
             for key in keys[:-1]:
                 dictionary = dictionary.setdefault(key, {})
             dictionary[keys[-1]] = value
 
-        for id, item in enumerate(project_items):
-            parts = [*item.project_path.parts, id]
-            set_nested_keys(nested_directory, parts, item)
+        for index, item in enumerate(project_items):
+            parts = [*item.project_path.parts, index]
+            set_nested_keys(nested_items_dict, parts, item)
+
+        return nested_items_dict
+
+    def print_nested_items(self, dictionary, level=1):
+
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                print(f"/{'---' * level}{key}")
+                self.print_nested_items(value, level + 1)
+            else:
+                print(f"{key}{'---' * level}{value.name}")
 
 class Resource:
     """Allows for shared characteristics between multiple types of xml imports"""
