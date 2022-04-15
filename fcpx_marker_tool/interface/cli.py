@@ -7,9 +7,9 @@ class MenuBasedCLI:
         file_path = self._input_to_path("Enter file: ")
         parser = XMLParser(file_path).create_parser()
         parsed_project_file = parser.parse_xml()
-        marker_list = self._multiple_source_check(parsed_project_file)
-        if len(marker_list) != 0:
-            formatted_marker_list = self._choose_output_format(marker_list)
+        marker_source = self._multiple_source_check(parsed_project_file)
+        if len(marker_source.markers) != 0:
+            formatted_marker_list = self._choose_output_format(marker_source.markers)
             self._save_prompt(formatted_marker_list)
         else:
             print("No markers found.")
@@ -36,23 +36,36 @@ class MenuBasedCLI:
         return input_path
 
     def _multiple_source_check(self, project_file_obj):
-        project_root = project_file_obj.root_container
 
-        if len(project_root.children) > 1:
-            project_root.print_tree()
-            marker_list = self._choose_marker_source(project_root)
+        if len(project_file_obj.items) > 1:
+            project_file_obj.print_nested_items()
+            marker_source = self._choose_marker_source(project_file_obj)
         else:
             try:
-                # need more accurate method for grabbing single
-                marker_list = project_root.children[0].children[0].markers
+                marker_source = project_file_obj.items[0]
             except IndexError:
-                print("Project contains no valid containers, timelines, or clips")
+                print("Project contains no valid timelines, or clips")
 
-        return marker_list
+        return marker_source
 
-    def _choose_marker_source(self, project_root_container):
-        # print menu showing directory structure, user input determines clip or timeline to grab marker data from
-        pass
+    def _choose_marker_source(self, project_file_obj):
+        message = "There is more than one timeline or clip present in this file, select an item to parse: "
+        while True:
+            user_input = int(input(message))
+
+            if user_input == 'exit':
+                raise SystemExit(0)
+            elif not isinstance(user_input, int):
+                message = "Enter a valid item number from the list to continue: "
+                raise ValueError("Value must be an integer")
+            else:
+                try:
+                    project_item = project_file_obj[user_input]
+                    break
+                except IndexError:
+                    print("Invalid item number")
+
+        return project_item
 
     def _choose_output_format(self, marker_list):
         # formatting examples will include "YouTube", "DVD Studio Pro", "Marker Name - Frames", "Marker Name - Fractional Timecode"

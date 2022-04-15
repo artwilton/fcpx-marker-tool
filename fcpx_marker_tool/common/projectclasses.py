@@ -56,7 +56,11 @@ class ProjectFile:
 
         return nested_items_dict
 
-    def print_nested_items(self, dictionary, level=1):
+    def print_nested_items(self, dictionary=None, level=1):
+
+        # allows for flexibility of simply calling print_nested_items() from a project file instance, or supplying a different dictionary
+        if dictionary is None:
+            dictionary = self.get_nested_items(self.items)
 
         for key, value in dictionary.items():
             if isinstance(value, dict):
