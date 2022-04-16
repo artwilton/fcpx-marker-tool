@@ -60,7 +60,7 @@ class MenuBasedCLI:
                 raise ValueError("Value must be an integer")
             else:
                 try:
-                    project_item = project_file_obj[user_input]
+                    project_item = project_file_obj.items[user_input]
                     break
                 except IndexError:
                     print("Invalid item number")

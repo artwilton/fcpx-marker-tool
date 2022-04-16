@@ -1,7 +1,7 @@
 import copy
 from fractions import Fraction
 from pathlib import Path
-from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Container, Marker
+from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Marker
 from common.timecodeclasses import TimecodeInfo
 
 class FCPXParser:
@@ -9,6 +9,7 @@ class FCPXParser:
     def __init__(self, xml_root):
         self.xml_root = xml_root
         self._project_file = self._create_project_file()
+        self.current_path = self.project_file.project_path
 
     # PROJECT FILE
     @property
@@ -16,21 +17,29 @@ class FCPXParser:
         return self._project_file
 
     def _create_project_file(self):
-        name, path = self._get_project_info()
-        return ProjectFile(name, path)
+        name, file_path = self._get_project_info()
+        return ProjectFile(name, file_path)
 
     def _get_project_info(self):
         library = self.xml_root.find('library')
         if library is None:
             raise ValueError("'library' element not found")
 
-        path = library.get('location')
-        name = Path(path).name
+        file_path = library.get('location')
+        name = Path(file_path).name
 
-        return name, path
+        return name, file_path
+
+    def _create_project_items(self):
+        events = self.xml_root.findall('./library/event')
+
+        for event in events:
+            self.current_path = self.project_file.project_path.joinpath(f"{event.get('name')}")
+            event_children = self._parse_event(event)
+            self.project_file.items.extend(event_children)
 
     # RESOURCES
-    def _create_resources(self, project_file):
+    def _create_resources(self):
         resources = self.xml_root.find('resources')
         if resources is None:
             raise ValueError("'resources' element not found")
@@ -40,7 +49,7 @@ class FCPXParser:
                 id, name, path, start, duration, format, non_drop_frame = self._filter_resource_type(resource)
                 frame_rate_tuple, interlaced = self._frame_info_from_format(format)
                 timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset=0, non_drop_frame=non_drop_frame)
-                project_file.add_resource(Resource(id, name, path, timecode_info, interlaced))
+                self.project_file.add_resource(Resource(id, name, path, timecode_info, interlaced))
 
     def _filter_resource_type(self, resource):
         if resource.tag == 'asset':
@@ -164,7 +173,7 @@ class FCPXParser:
             timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset, non_drop_frame)
             conformed_frame_rate = None
 
-        clip_obj = Clip(name, type, timecode_info, interlaced, resource_id)
+        clip_obj = Clip(name, type, timecode_info, self.current_path, interlaced, resource_id)
         self._add_markers_to_clip(clip_element, clip_obj, conformed_frame_rate)
 
         return clip_obj
@@ -272,20 +281,11 @@ class FCPXParser:
         else:
             return True
 
-    # CONTAINERS
-    def _create_containers(self, project_file):
-        events = self.xml_root.findall('./library/event')
-
-        for event in events:
-            event_children = self._parse_event(event)
-            event_container = Container(event.get("name"), event_children)
-            project_file.root_container.add_child(event_container)
-
     # TIMELINES
     def _create_timeline(self, timeline_element):
         # Grab metadata, create timeline instance
         name, timecode_info, interlaced = self._get_timeline_info(timeline_element)
-        timeline_obj = Timeline(name, timecode_info, interlaced)
+        timeline_obj = Timeline(name, timecode_info, self.current_path, interlaced)
         self._handle_timeline_clip_creation(timeline_element, timeline_obj)
 
         return timeline_obj
@@ -404,7 +404,7 @@ class FCPXParser:
         return attribute_value
 
     def parse_xml(self):
-        self._create_resources(self.project_file)
-        self._create_containers(self.project_file)
+        self._create_resources()
+        self._create_project_items()
 
         return self.project_file
