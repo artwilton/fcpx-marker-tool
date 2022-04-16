@@ -20,10 +20,9 @@ class FCPXParser:
         return ProjectFile(name, path)
 
     def _get_project_info(self):
-        try:
-            library = self.xml_root.find('library')
-        except:
-            print("'library' element not found")
+        library = self.xml_root.find('library')
+        if library is None:
+            raise ValueError("'library' element not found")
 
         path = library.get('location')
         name = Path(path).name
@@ -32,10 +31,9 @@ class FCPXParser:
 
     # RESOURCES
     def _create_resources(self, project_file):
-        try:
-            resources = self.xml_root.find('resources')
-        except:
-            print("'resources' element not found")
+        resources = self.xml_root.find('resources')
+        if resources is None:
+            raise ValueError("'resources' element not found")
 
         for resource in resources:
             if resource.tag == 'asset' or resource.tag == 'media':
