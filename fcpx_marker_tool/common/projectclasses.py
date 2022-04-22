@@ -56,18 +56,25 @@ class ProjectFile:
 
         return nested_items_dict
 
-    def print_nested_items(self, dictionary=None, level=1):
-
+    def create_and_print_nested_items(self, dictionary=None):
+        item_list = []
         # allows for flexibility of simply calling print_nested_items() from a project file instance, or supplying a different dictionary
         if dictionary is None:
             dictionary = self.get_nested_items(self.items)
 
+        self.recursive_parse_nested_items(dictionary, item_list)
+
+        for item in item_list:
+            print(item)
+
+    def recursive_parse_nested_items(self, dictionary, item_list, level=1):
+
         for key, value in dictionary.items():
             if isinstance(value, dict):
-                print(f"/{'---' * level}{key}")
-                self.print_nested_items(value, level + 1)
+                item_list.append(f"/{'---' * level}{key}")
+                self.recursive_parse_nested_items(value, item_list, level + 1)
             else:
-                print(f"{key}{'---' * level}{value.name}")
+                item_list.append(f"{key}{'---' * level}{value.name}")
 
 class Resource:
     """Allows for shared characteristics between multiple types of xml imports"""
