@@ -85,7 +85,7 @@ class MenuBasedCLI:
     def _multiple_source_check(self, project_file_obj):
 
         if len(project_file_obj.items) > 1:
-            project_file_obj.print_nested_items()
+            project_file_obj.create_and_print_nested_items()
             marker_source = self._choose_marker_source(project_file_obj)
         else:
             try:
@@ -118,9 +118,9 @@ class MenuBasedCLI:
         while True:
             if print_choices:
                 for index, value in enumerate(choices_list):
-                    print(f"{index}) {value}")
+                    print(f"{index}. {value}")
             user_input = input(message)
-
+    
             if user_input == 'exit':
                 raise SystemExit(0)
             else:
