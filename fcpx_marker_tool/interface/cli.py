@@ -1,6 +1,52 @@
 from pathlib import Path
 from parsers.xmlparser import XMLParser
 
+class OutputFormat:
+
+    def __init__(self, item, format_option=None):
+        self.item = item
+        if self.item.timecode_info.conform_rate_check:
+            self.frame_rate = self.item.timecode_info.conformed_frame_rate
+        else:
+            self.frame_rate = self.item.timecode_info.frame_rate
+        if format_option is not None:
+            self.formatted = self.set_format(format_option)
+
+    def youtube(self):
+        # need to implement specific checks here:
+            # First chapter must start with 00:00.
+            # There must be at least three timestamps listed in ascending order.
+            # The minimum length for video chapters is 10 seconds.
+            # https://support.google.com/youtube/answer/9884579
+        timecode = self.item.timecode_info.start.as_hr_min_sec(self.frame_rate, self.item.timecode_info.non_drop_frame)
+        return f"{timecode} {self.item.name}"
+        
+    def dvd_studio_pro(self):
+        # need to check for first chapter starting at 00:00:00:00 here
+        timecode = self.item.timecode_info.start.as_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
+        return f"{timecode} {self.item.name}"
+
+    def name_frames(self):
+        frame_number = self.item.timecode_info.start.as_frame(self.frame_rate)
+        return f"{self.item.name} - {frame_number}"
+
+    def name_fractional_timecode(self):
+        fractional_timecode = self.item.timecode_info.start.as_fractional_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
+        return f"{self.item.name} - {fractional_timecode}"
+
+    FORMAT_OPTIONS = {
+    "Youtube": youtube,
+    "DVD Studio Pro": dvd_studio_pro,
+    "Marker Name - Frames": name_frames,
+    "Marker Name - Fractional Timecode": name_fractional_timecode
+    }
+
+    def set_format(self, format_option):
+        try:
+            return self.FORMAT_OPTIONS[format_option](self)
+        except KeyError:
+            print("Invalid format option")
+
 class MenuBasedCLI:
 
     def run_cli(self):
@@ -9,7 +55,8 @@ class MenuBasedCLI:
         parsed_project_file = parser.parse_xml()
         marker_source = self._multiple_source_check(parsed_project_file)
         if len(marker_source.markers) != 0:
-            formatted_marker_list = self._choose_output_format(marker_source.markers)
+            output_format = self._choose_output_format()
+            formatted_marker_list = self._format_marker_list(marker_source.markers, output_format)
             self._save_prompt(formatted_marker_list)
         else:
             print("No markers found.")
@@ -49,34 +96,52 @@ class MenuBasedCLI:
         return marker_source
 
     def _choose_marker_source(self, project_file_obj):
-        message = "There is more than one timeline or clip present in this file, select an item to parse: "
+        message = "More than one timeline or clip was found. Select an item to parse by entering an option number: "
+        return self._menu_selection_template(message, project_file_obj.items)
+  
+    def _choose_output_format(self):
+        message = "Select an output format by entering an option number: "
+        choices_list = list(OutputFormat.FORMAT_OPTIONS.keys())
+        output_format = self._menu_selection_template(message, choices_list, print_choices=True)
+        return output_format
+
+    def _format_marker_list(self, marker_list, output_format):
+        formatted_marker_list = []
+
+        for marker in marker_list:
+            marker_string = OutputFormat(marker, output_format).formatted
+            formatted_marker_list.append(marker_string)
+
+        return formatted_marker_list
+
+    def _menu_selection_template(self, message, choices_list, print_choices=False):
         while True:
-            user_input = int(input(message))
+            if print_choices:
+                for index, value in enumerate(choices_list):
+                    print(f"{index}) {value}")
+            user_input = input(message)
 
             if user_input == 'exit':
                 raise SystemExit(0)
-            elif not isinstance(user_input, int):
-                message = "Enter a valid item number from the list to continue: "
-                raise ValueError("Value must be an integer")
             else:
                 try:
-                    project_item = project_file_obj.items[user_input]
-                    break
-                except IndexError:
-                    print("Invalid item number")
+                    user_input = int(user_input)
+                except ValueError:
+                    print()
+                    message = "Selection must be an integer.\nEnter a valid item choice from the list to continue: "
+                    continue
 
-        return project_item
+            try:
+                user_selection = choices_list[user_input]
+                break
+            except IndexError:
+                print("Invalid item choice")
+                message = "Enter a valid item choice from the list to continue: "
 
-    def _choose_output_format(self, marker_list):
-        # formatting examples will include "YouTube", "DVD Studio Pro", "Marker Name - Frames", "Marker Name - Fractional Timecode"
-        # for now just return marker_list for testing
-        return marker_list
+        return user_selection
 
     def _save_prompt(self, formatted_marker_list):
         user_input_path = input("Choose a location to save the Marker List, or press 'Enter' to print without saving: ")
 
         for marker in formatted_marker_list:
-            frame_rate = marker.timecode_info.frame_rate
-            start = marker.timecode_info.start.as_frame(frame_rate)
-            rational_time = marker.timecode_info.start
-            print(f"Start: {start} Frame Rate: {frame_rate} Rational: {rational_time}")
+            print(marker)
