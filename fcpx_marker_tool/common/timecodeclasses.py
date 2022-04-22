@@ -102,12 +102,20 @@ class RationalTime(NamedTuple):
         return frame
 
     def as_timecode(self, frame_rate, non_drop_frame=True):
-        return self._create_timecode_obj(frame_rate, non_drop_frame).tc_to_string
+        timecode_obj = self._create_timecode_obj(frame_rate, non_drop_frame)
+        # returns standard format timecode as string, copied from Timecode __repr__
+        return timecode_obj.tc_to_string(*timecode_obj.frames_to_tc(timecode_obj.frames))
 
     def as_fractional_timecode(self, frame_rate, non_drop_frame=True):
-        self._create_timecode_obj(frame_rate, non_drop_frame).set_fractional(True)
-        fractional_output = self.tc_to_string(*self.frames_to_tc(self.frames))
-        return fractional_output
+        timecode_obj = self._create_timecode_obj(frame_rate, non_drop_frame)
+        timecode_obj.set_fractional(True)
+        # returns fractional timecode as string, copied from Timecode __repr__
+        return timecode_obj.tc_to_string(*timecode_obj.frames_to_tc(timecode_obj.frames))
+
+    def as_hr_min_sec(self, frame_rate, non_drop_frame=True):
+        timecode_obj = self._create_timecode_obj(frame_rate, non_drop_frame)
+        hr, min, sec = (lambda *args: [str(arg).zfill(2) for arg in args])(timecode_obj.hrs, timecode_obj.mins, timecode_obj.secs)
+        return f"{hr + ':' if hr != '00' else ''}{min}:{sec}"
 
     def _create_timecode_obj(self, frame_rate, non_drop_frame):
         return Timecode(frame_rate, frames=self.as_frame(frame_rate) + 1, force_non_drop_frame=non_drop_frame)
