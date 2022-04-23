@@ -1,51 +1,6 @@
 from pathlib import Path
 from parsers.xmlparser import XMLParser
-
-class OutputFormat:
-
-    def __init__(self, item, format_option=None):
-        self.item = item
-        if self.item.timecode_info.conform_rate_check:
-            self.frame_rate = self.item.timecode_info.conformed_frame_rate
-        else:
-            self.frame_rate = self.item.timecode_info.frame_rate
-        if format_option is not None:
-            self.formatted = self.set_format(format_option)
-
-    def youtube(self):
-        # need to implement specific checks here:
-            # First chapter must start with 00:00.
-            # There must be at least three timestamps listed in ascending order.
-            # The minimum length for video chapters is 10 seconds.
-            # https://support.google.com/youtube/answer/9884579
-        timecode = self.item.timecode_info.start.as_hr_min_sec(self.frame_rate, self.item.timecode_info.non_drop_frame)
-        return f"{timecode} {self.item.name}"
-        
-    def dvd_studio_pro(self):
-        # need to check for first chapter starting at 00:00:00:00 here
-        timecode = self.item.timecode_info.start.as_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
-        return f"{timecode} {self.item.name}"
-
-    def name_frames(self):
-        frame_number = self.item.timecode_info.start.as_frame(self.frame_rate)
-        return f"{self.item.name} - {frame_number}"
-
-    def name_fractional_timecode(self):
-        fractional_timecode = self.item.timecode_info.start.as_fractional_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
-        return f"{self.item.name} - {fractional_timecode}"
-
-    FORMAT_OPTIONS = {
-    "Youtube": youtube,
-    "DVD Studio Pro": dvd_studio_pro,
-    "Marker Name - Frames": name_frames,
-    "Marker Name - Fractional Timecode": name_fractional_timecode
-    }
-
-    def set_format(self, format_option):
-        try:
-            return self.FORMAT_OPTIONS[format_option](self)
-        except KeyError:
-            print("Invalid format option")
+from common.formatting import OutputFormat, DirectoryTree
 
 class MenuBasedCLI:
 
@@ -85,7 +40,7 @@ class MenuBasedCLI:
     def _multiple_source_check(self, project_file_obj):
 
         if len(project_file_obj.items) > 1:
-            project_file_obj.create_and_print_nested_items()
+            DirectoryTree(project_file_obj.items).print_tree()
             marker_source = self._choose_marker_source(project_file_obj)
         else:
             try:

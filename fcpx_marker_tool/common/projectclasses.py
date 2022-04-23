@@ -40,42 +40,6 @@ class ProjectFile:
     def get_timelines(self):
         return [item for item in self.items if isinstance(item, Timeline)]
 
-    def get_nested_items(self, project_items):
-        # returns a dictionary of items nested based on their project path, the key for each item object will be its index number in self.items
-        # ex: {'Folder': {1: <item_obj_1>, 2: <item_obj_2>, 'Subfolder': {3: <item_obj_3>}}}
-        nested_items_dict = {}
-
-        def set_nested_keys(dictionary, keys, value):
-            for key in keys[:-1]:
-                dictionary = dictionary.setdefault(key, {})
-            dictionary[keys[-1]] = value
-
-        for index, item in enumerate(project_items):
-            parts = [*item.project_path.parts, index]
-            set_nested_keys(nested_items_dict, parts, item)
-
-        return nested_items_dict
-
-    def create_and_print_nested_items(self, dictionary=None):
-        item_list = []
-        # allows for flexibility of simply calling print_nested_items() from a project file instance, or supplying a different dictionary
-        if dictionary is None:
-            dictionary = self.get_nested_items(self.items)
-
-        self.recursive_parse_nested_items(dictionary, item_list)
-
-        for item in item_list:
-            print(item)
-
-    def recursive_parse_nested_items(self, dictionary, item_list, level=1):
-
-        for key, value in dictionary.items():
-            if isinstance(value, dict):
-                item_list.append(f"/{'---' * level}{key}")
-                self.recursive_parse_nested_items(value, item_list, level + 1)
-            else:
-                item_list.append(f"{key}{'---' * level}{value.name}")
-
 class Resource:
     """Allows for shared characteristics between multiple types of xml imports"""
     
