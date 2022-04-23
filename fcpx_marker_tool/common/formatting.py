@@ -48,12 +48,12 @@ class DirectoryTree:
     def __init__(self, item_list, file_path=False):
         self.item_list = item_list #must be a list containing item objects that all have a valid project_path or file_path
         self.nested_items = self._get_nested_items(file_path=file_path)
-        self._current_path_level = 0 # setting a helper for _recursive_parse_nested_items()
 
     def print_tree(self):
         item_list = []
         self._recursive_parse_nested_items(self.nested_items, item_list)
 
+        print(".")
         for item in item_list:
             print(item)
 
@@ -76,36 +76,15 @@ class DirectoryTree:
 
         return nested_items_dict
 
-    def _recursive_parse_nested_items(self, dictionary, item_list, level=0, level_change=False):
+    def _recursive_parse_nested_items(self, dictionary, item_list, level=0, prefix=""):
+        directory_count = len(dictionary)
 
-        for key, value in dictionary.items():
-
-            if level_change:
-                item_list.append(f"Level changed to {level}")
-                level_change = False
+        for index, (key, value) in enumerate(dictionary.items()):
+            connector = "├──" if index != directory_count - 1 else "└──"
 
             if isinstance(value, dict):
-
-
-                    # level_change = False
-                item_list.append(f"{'   ' * level}└── {key}")
-                self._recursive_parse_nested_items(value, item_list, level+1, level_change=True)
-                item_list.append(f"Level changed to {level}")
+                prefix = "│" if index != directory_count - 1 else " "
+                item_list.append(f"{'   ' * level}{connector} {key}")
+                self._recursive_parse_nested_items(value, item_list, level+1, prefix)
             else:
-                item_list.append(f"{'   ' * int(level/2)}│{'   ' * int(level/2)}└── [{key}] {value.name}")
-
-                # ├──
-
-    # def recursive_parse_nested_items(self, dictionary, item_list, level=0, prev_level=0):
-
-    #     for key, value in dictionary.items():
-
-    #         if isinstance(value, dict):
-    #             try:
-    #                 item_list[-1] = item_list[-1].replace("├──", "└──")
-    #             except IndexError:
-    #                 pass
-    #             item_list.append(f"{'   ' * level}└── {key}")
-    #             self.recursive_parse_nested_items(value, item_list, level=level+1, prev_level=level)
-    #         else:
-    #             item_list.append(f"{'   ' * int(level/2)}│{'   ' * int(level/2)}├── [{key}] {value.name}")
+                item_list.append(f"{'   ' * int(level/2)}{prefix}{'   ' * int(level/2)}{connector} [{key}] {value.name}")
