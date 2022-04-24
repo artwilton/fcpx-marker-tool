@@ -1,6 +1,6 @@
 from pathlib import Path
 from parsers.xmlparser import XMLParser
-from common.formatting import OutputFormat, DirectoryTree
+from common.filemanagement import OutputFormatting, OutputFile, DirectoryTree
 
 class MenuBasedCLI:
 
@@ -10,9 +10,9 @@ class MenuBasedCLI:
         parsed_project_file = parser.parse_xml()
         marker_source = self._multiple_source_check(parsed_project_file)
         if len(marker_source.markers) != 0:
-            output_format = self._choose_output_format()
-            formatted_marker_list = self._format_marker_list(marker_source.markers, output_format)
-            self._save_prompt(formatted_marker_list)
+            output_formatting = self._choose_output_formatting()
+            formatted_marker_list = self._format_marker_list(marker_source.markers, output_formatting)
+            self._format_and_save_file(formatted_marker_list)
         else:
             print("No markers found.")
 
@@ -54,17 +54,17 @@ class MenuBasedCLI:
         message = "More than one timeline or clip was found. Select an item to parse by entering an option number: "
         return self._menu_selection_template(message, project_file_obj.items)
   
-    def _choose_output_format(self):
+    def _choose_output_formatting(self):
         message = "Select an output format by entering an option number: "
-        choices_list = list(OutputFormat.FORMAT_OPTIONS.keys())
-        output_format = self._menu_selection_template(message, choices_list, print_choices=True)
-        return output_format
+        choices_list = list(OutputFormatting.FORMATTING_OPTIONS.keys())
+        output_formatting = self._menu_selection_template(message, choices_list, print_choices=True)
+        return output_formatting
 
-    def _format_marker_list(self, marker_list, output_format):
+    def _format_marker_list(self, marker_list, output_formatting):
         formatted_marker_list = []
 
         for marker in marker_list:
-            marker_string = OutputFormat(marker, output_format).formatted
+            marker_string = OutputFormatting(marker, output_formatting).formatted
             formatted_marker_list.append(marker_string)
 
         return formatted_marker_list
@@ -73,7 +73,9 @@ class MenuBasedCLI:
         while True:
             if print_choices:
                 for index, value in enumerate(choices_list):
-                    print(f"{index}. {value}")
+                    print(f"{index + 1}. {value}")
+                print_choices=False
+
             user_input = input(message)
     
             if user_input == 'exit':
@@ -82,21 +84,39 @@ class MenuBasedCLI:
                 try:
                     user_input = int(user_input)
                 except ValueError:
-                    print()
                     message = "Selection must be an integer.\nEnter a valid item choice from the list to continue: "
                     continue
-
-            try:
-                user_selection = choices_list[user_input]
-                break
-            except IndexError:
-                print("Invalid item choice")
-                message = "Enter a valid item choice from the list to continue: "
+            
+            if user_input > 0:
+                try:
+                    user_selection = choices_list[user_input - 1]
+                    break
+                except IndexError:
+                    message = "Enter a valid item choice from the list to continue: "
+                    print("Error: Invalid item choice")
+            else:
+                print("Error: Invalid item choice, selection must be an integer greater than 0")
 
         return user_selection
 
-    def _save_prompt(self, formatted_marker_list):
-        user_input_path = input("Choose a location to save the Marker List, or press 'Enter' to print without saving: ")
+    def _choose_output_formatting(self):
+        message = "Select an output format by entering an option number: "
+        choices_list = list(OutputFormatting.FORMATTING_OPTIONS.keys())
+        output_formatting = self._menu_selection_template(message, choices_list, print_choices=True)
+        return output_formatting
 
-        for marker in formatted_marker_list:
-            print(marker)
+    def _format_and_save_file(self, formatted_marker_list):
+        message = "Select a file export type by entering an option number: "
+        choices_list = list(OutputFile.FILE_FORMAT_OPTIONS.keys())
+        file_format = self._menu_selection_template(message, choices_list, print_choices=True)
+
+        if file_format != "Print":
+            output_file_path = input("Enter a file path to save the Marker List: ")
+            OutputFile(formatted_marker_list, file_format, output_file_path)
+        else:
+            OutputFile(formatted_marker_list, file_format)
+        # output_file.save_file()
+
+        # user_input_path = input("Enter a file path to save the Marker List, or press 'Enter' to print without saving: ")
+        # for marker in formatted_marker_list:
+        #     print(marker)

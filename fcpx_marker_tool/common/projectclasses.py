@@ -12,7 +12,6 @@ class ProjectFile:
             self.project_path = project_path
         self.resources = []
         self.items = [] # list of clip and/or timeline objects found in project
-        self.root_container = Container(name)
 
     @property
     def project_path(self):
@@ -49,35 +48,6 @@ class Resource:
         self.file_path = file_path # for anything that's not a file like compound clips, this can be labeled as something like "internal"
         self.timecode_info = timecode_info # TimecodeInfo class object
         self.interlaced = interlaced # boolean, True for progressive and False for interlaced
-
-class Container:
-    """Used for creating a simple directory structure. Container children nodes can be another container, timeline, or clip."""
-
-    def __init__(self, name, children=None):
-        self.name = name
-        self.children = []
-        if children is not None:
-            for child in children:
-                self.add_child(child)
-
-    def add_child(self, child):
-        self.children.append(child)
-
-    def print_tree(self):
-        self._recursive_container(self)
-
-    @classmethod
-    def _recursive_container(cls, container, level=1):
-        print(f"{'---' * level}{container.name}")
-
-        sorted_container = sorted(container.children, key=lambda child: child.name if child.name else child)
-
-        for child in sorted_container:
-            if isinstance(child, cls):
-                # level += 1
-                cls._recursive_container(child, level + 1)
-            else:
-                print(f"{'------' * level}{child.name}")
 
 class Timeline:
 
