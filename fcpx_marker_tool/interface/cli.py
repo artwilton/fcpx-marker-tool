@@ -115,8 +115,3 @@ class MenuBasedCLI:
             OutputFile(formatted_marker_list, file_format, output_file_path)
         else:
             OutputFile(formatted_marker_list, file_format)
-        # output_file.save_file()
-
-        # user_input_path = input("Enter a file path to save the Marker List, or press 'Enter' to print without saving: ")
-        # for marker in formatted_marker_list:
-        #     print(marker)
