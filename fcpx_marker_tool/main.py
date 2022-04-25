@@ -1,7 +1,7 @@
-from interface.cli import MenuBasedCLI
+from fcpx_marker_tool.interface import cli
 
 def main():
-    interface = MenuBasedCLI()
+    interface = cli.MenuBasedCLI()
     interface.run_cli()
 
 if __name__ == "__main__":

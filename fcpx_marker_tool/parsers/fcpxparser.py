@@ -1,8 +1,8 @@
 import copy
 from fractions import Fraction
 from pathlib import Path
-from common.projectclasses import ProjectFile, Resource, Timeline, Clip, Marker
-from common.timecodeclasses import TimecodeInfo
+from fcpx_marker_tool.common.projectclasses import ProjectFile, Resource, Timeline, Clip, Marker
+from fcpx_marker_tool.common.timecodeclasses import TimecodeInfo
 
 class FCPXParser:
 

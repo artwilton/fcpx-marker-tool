@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 
-from parsers.fcpxparser import FCPXParser
-from parsers.fcp7parser import FCP7Parser
+from fcpx_marker_tool.parsers.fcpxparser import FCPXParser
+from fcpx_marker_tool.parsers.fcp7parser import FCP7Parser
 
 class XMLParser:
 

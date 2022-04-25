@@ -1,6 +1,6 @@
 from pathlib import Path
-from parsers.xmlparser import XMLParser
-from common.filemanagement import OutputFormatting, OutputFile, DirectoryTree
+from fcpx_marker_tool.parsers.xmlparser import XMLParser
+from fcpx_marker_tool.common import filemanagement
 
 class MenuBasedCLI:
 
@@ -40,7 +40,7 @@ class MenuBasedCLI:
     def _multiple_source_check(self, project_file_obj):
 
         if len(project_file_obj.items) > 1:
-            DirectoryTree(project_file_obj.items).print_tree()
+            filemanagement.DirectoryTree(project_file_obj.items).print_tree()
             marker_source = self._choose_marker_source(project_file_obj)
         else:
             try:
@@ -56,7 +56,7 @@ class MenuBasedCLI:
   
     def _choose_output_formatting(self):
         message = "Select an output format by entering an option number: "
-        choices_list = list(OutputFormatting.FORMATTING_OPTIONS.keys())
+        choices_list = list(filemanagement.OutputFormatting.FORMATTING_OPTIONS.keys())
         output_formatting = self._menu_selection_template(message, choices_list, print_choices=True)
         return output_formatting
 
@@ -64,7 +64,7 @@ class MenuBasedCLI:
         formatted_marker_list = []
 
         for marker in marker_list:
-            marker_string = OutputFormatting(marker, output_formatting).formatted
+            marker_string = filemanagement.OutputFormatting(marker, output_formatting).formatted
             formatted_marker_list.append(marker_string)
 
         return formatted_marker_list
@@ -101,17 +101,17 @@ class MenuBasedCLI:
 
     def _choose_output_formatting(self):
         message = "Select an output format by entering an option number: "
-        choices_list = list(OutputFormatting.FORMATTING_OPTIONS.keys())
+        choices_list = list(filemanagement.OutputFormatting.FORMATTING_OPTIONS.keys())
         output_formatting = self._menu_selection_template(message, choices_list, print_choices=True)
         return output_formatting
 
     def _format_and_save_file(self, formatted_marker_list):
         message = "Select a file export type by entering an option number: "
-        choices_list = list(OutputFile.FILE_FORMAT_OPTIONS.keys())
+        choices_list = list(filemanagement.OutputFile.FILE_FORMAT_OPTIONS.keys())
         file_format = self._menu_selection_template(message, choices_list, print_choices=True)
 
         if file_format != "Print":
             output_file_path = input("Enter a file path to save the Marker List: ")
-            OutputFile(formatted_marker_list, file_format, output_file_path)
+            filemanagement.OutputFile(formatted_marker_list, file_format, output_file_path)
         else:
-            OutputFile(formatted_marker_list, file_format)
+            filemanagement.OutputFile(formatted_marker_list, file_format)
