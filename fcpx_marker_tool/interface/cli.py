@@ -5,7 +5,7 @@ from fcpx_marker_tool.common import filemanagement
 class MenuBasedCLI:
 
     def run_cli(self):
-        file_path = self._input_to_path("Enter file: ")
+        file_path = self._input_to_path("Enter file path: ")
         parser = XMLParser(file_path).create_parser()
         parsed_project_file = parser.parse_xml()
         marker_source = self._multiple_source_check(parsed_project_file)
