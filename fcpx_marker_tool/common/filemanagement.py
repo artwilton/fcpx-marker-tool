@@ -56,7 +56,7 @@ class OutputFormatting:
             self.formatted = self.set_formatting(formatting_option)
 
     def youtube(self):
-        # need to implement specific checks here:
+        # will implement specific checks here in future releases:
             # First chapter must start with 00:00.
             # There must be at least three timestamps listed in ascending order.
             # The minimum length for video chapters is 10 seconds.
