@@ -1,4 +1,48 @@
 import sys
+from pathlib import Path
+
+class InputHandler:
+
+    def __init__(self, user_input_path):
+        self.user_input_path = user_input_path
+
+    @property
+    def user_input_path(self):
+        return self._user_input_path
+
+    @user_input_path.setter
+    def user_input_path(self, value):
+        # Handle path possibly being wrapped in single quotes when file is drag-and-dropped into terminal
+        if value.startswith("'") and value.endswith("'"):
+            user_input = value[1:-1]
+        else:
+            user_input = value
+        # Handle terminal possibly adding '\' to espace spaces when file is drag-and-dropped, except on Windows
+        if not sys.platform.startswith('win32'):
+             user_input =  user_input.replace('\\ ', ' ')
+
+        self._user_input_path = Path(user_input.strip())
+
+    def validate_path(self, saving_file=False):
+        if saving_file:
+            return self.user_input_path.parent.exists()
+        else:
+            return self.user_input_path.exists()
+
+    def set_save_location(self, overwrite=False):
+        valid_parent_directory = self.validate_path(saving_file=True)
+
+        if self.user_input_path.is_dir():
+            raise IsADirectoryError
+        elif valid_parent_directory:
+            if overwrite:
+                return self.user_input_path
+            elif not self.validate_path():
+                return self.user_input_path
+            else:
+                raise FileExistsError
+        else:
+            raise FileNotFoundError
 
 class OutputFormatting:
 
@@ -64,9 +108,7 @@ class OutputFile:
         self._save_file()
 
     def text_file(self):
-        # add more path validations in the future
-        if not self.output_file_path.endswith(".txt"):
-            self.output_file_path += ".txt"
+        self.output_file_path = self.output_file_path.with_suffix('.txt')
         self.output_file_path = open(self.output_file_path, "w", encoding="UTF-8")
         self._save_file()
 

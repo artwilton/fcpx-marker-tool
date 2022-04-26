@@ -1,12 +1,18 @@
-from pathlib import Path
+from xml.etree.ElementTree import ParseError
 from fcpx_marker_tool.parsers.xmlparser import XMLParser
 from fcpx_marker_tool.common import filemanagement
 
 class MenuBasedCLI:
 
     def run_cli(self):
-        file_path = self._input_to_path("Enter file path: ")
-        parser = XMLParser(file_path).create_parser()
+        while True:
+            try:
+                file_path = self._file_input_template("Enter file path: ")
+                parser = XMLParser(file_path).create_parser()
+                break
+            except (IsADirectoryError, ValueError, ParseError):
+                print("Error: not a valid xml file")
+
         parsed_project_file = parser.parse_xml()
         marker_source = self._multiple_source_check(parsed_project_file)
         if len(marker_source.markers) != 0:
@@ -17,25 +23,6 @@ class MenuBasedCLI:
             print("No markers found.")
 
         return 0
-
-    def _input_to_path(self, message):
-        user_input = ""
-
-        while user_input != "exit":
-            user_input = input(message)
-            # Handle path being wrapped in single quotes
-            if user_input.startswith("'") and user_input.endswith("'"):
-                user_input = user_input[1:-1]
-            # create a Path object from input, remove trailing white spaces
-            input_path = Path(user_input.strip())
-            #validate file exists
-            if not input_path.exists():
-                print("Please enter valid file path.")
-                continue
-            else:
-                break
-           
-        return input_path
 
     def _multiple_source_check(self, project_file_obj):
 
@@ -68,6 +55,45 @@ class MenuBasedCLI:
             formatted_marker_list.append(marker_string)
 
         return formatted_marker_list
+
+    def _file_input_template(self, message, saving_file=False):
+
+        while True:
+            user_input = input(message)
+
+            if user_input == "exit":
+                raise SystemExit(0)
+            else:
+                file_path = filemanagement.InputHandler(user_input)
+
+            if saving_file:
+                try:
+                    return file_path.set_save_location()
+                except FileExistsError:
+                    if self._rewrite_check():
+                        return file_path.set_save_location(overwrite=True)
+                except FileNotFoundError:
+                    print("Error: not a valid directory")
+                except IsADirectoryError:
+                    print("Error: this is the name of an existing directory, but no file name was included")
+
+            elif file_path.validate_path():
+                return file_path.user_input_path
+            else:
+                raise ValueError
+
+    def _rewrite_check(self):
+        while True:
+            user_input = input("This file already exists, would you like to rewrite? Y/N: ")
+
+            if user_input == "exit":
+                raise SystemExit(0)
+            elif user_input.upper() == 'Y':
+                return True
+            elif user_input.upper() == 'N':
+                return False
+            else:
+                print("Error: Input must be 'Y' or 'N'")
 
     def _menu_selection_template(self, message, choices_list, print_choices=False):
         while True:
@@ -111,7 +137,8 @@ class MenuBasedCLI:
         file_format = self._menu_selection_template(message, choices_list, print_choices=True)
 
         if file_format != "Print":
-            output_file_path = input("Enter a file path to save the Marker List: ")
+            output_file_path = self._file_input_template("Enter a file path to save the Marker List: ", saving_file=True)
+            # output_file_path = input("Enter a file path to save the Marker List: ")
             filemanagement.OutputFile(formatted_marker_list, file_format, output_file_path)
         else:
             filemanagement.OutputFile(formatted_marker_list, file_format)
