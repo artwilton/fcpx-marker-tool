@@ -1,4 +1,4 @@
-from . import fcpx_marker_tool_v1
+from fcpx_marker_tool.main import main
 
-if __name__ == '__main__':
-    fcpx_marker_tool_v1.main()
+if __name__ == "__main__":
+    raise SystemExit(main())
