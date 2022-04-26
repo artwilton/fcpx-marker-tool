@@ -50,7 +50,9 @@ class MenuBasedCLI:
     def _format_marker_list(self, marker_list, output_formatting):
         formatted_marker_list = []
 
-        for marker in marker_list:
+        sorted_marker_list = sorted(marker_list, key=lambda marker: marker.timecode_info.start.as_fraction)
+
+        for marker in sorted_marker_list:
             marker_string = filemanagement.OutputFormatting(marker, output_formatting).formatted
             formatted_marker_list.append(marker_string)
 
