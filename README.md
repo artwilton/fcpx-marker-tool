@@ -6,6 +6,9 @@ Version 2 has now been released, and was completely rewritten and redesigned to 
 
 In future updates users will be able to `import fcpx_marker_tool` for use in their own scripts, as this module extracts and formats metadata pertaining to all timelines, clips, and markers found in the FCPXML file. (Note: this is technically possible now but the API is subject to change until a future release.)
 
+![fcpx_marker_tool_demo](https://user-images.githubusercontent.com/69938486/165228158-19ff6e18-e716-4e05-90af-02b1fe644745.gif)
+
+
 ----
 
 ### Installation
