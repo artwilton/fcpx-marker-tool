@@ -376,6 +376,7 @@ class FCPXParser:
                 timeline_marker = copy.deepcopy(marker)
                 t_marker, t_obj = timeline_marker.timecode_info, timeline_obj.timecode_info
                 t_marker.frame_rate, t_marker.non_drop_frame, t_marker.start = t_obj.frame_rate, t_obj.non_drop_frame, (marker_timeline_start_fraction * frame_duration)
+                t_marker.conformed_frame_rate = None
                 timeline_obj.add_marker(timeline_marker)
 
     # HELPERS
