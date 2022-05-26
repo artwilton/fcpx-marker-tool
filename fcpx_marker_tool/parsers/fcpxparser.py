@@ -82,6 +82,8 @@ class FCPXParser:
         else:
             duration = child_element.get('duration')
 
+        non_drop_frame = self._parse_non_drop_frame(non_drop_frame)
+
         return start, duration, format, non_drop_frame
 
     def _undefined_format_check(self, format_element):
@@ -191,7 +193,7 @@ class FCPXParser:
 
         if format:
             frame_rate_tuple, interlaced = self._frame_info_from_format(format)
-            non_drop_frame = clip_element.get('tcFormat')
+            non_drop_frame = self._parse_non_drop_frame(clip_element.get('tcFormat'))
         elif resource_id is not None:
             frame_rate_tuple, non_drop_frame, interlaced = self._parse_ref_info(resource_id)
         else:
@@ -274,9 +276,9 @@ class FCPXParser:
 
         return frame_rate, non_drop_frame, interlaced
 
-    def _parse_non_drop_frame(self, timecode_format):
+    def _parse_non_drop_frame(self, timecode_format_string):
         # easiest to make anything that isn't 'DF' True, since 'NDF' is most common and this will catch if timecode_format is None
-        if timecode_format == 'DF':
+        if timecode_format_string == 'DF':
             return False
         else:
             return True
@@ -294,6 +296,7 @@ class FCPXParser:
         name = timeline_element.get('name')
         sequence_element = timeline_element.find('./sequence')
         start, duration, format, non_drop_frame = self._get_attributes(sequence_element, 'tcStart','duration', 'format', 'tcFormat')
+        non_drop_frame = self._parse_non_drop_frame(non_drop_frame)
         frame_rate_tuple, interlaced = self._frame_info_from_format(format)
         timecode_info = self._create_timecode_info(frame_rate_tuple, start, duration, offset=0, non_drop_frame=non_drop_frame)
 
