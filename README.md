@@ -6,11 +6,6 @@ Version 2 has now been released, and was completely rewritten and redesigned to 
 
 In future updates users will be able to `import fcpx_marker_tool` for use in their own scripts, as this module extracts and formats metadata pertaining to all timelines, clips, and markers found in the FCPXML file. (Note: this is technically possible now but the API is subject to change until a future release.)
 
-![fcpx_marker_tool_demo](https://user-images.githubusercontent.com/69938486/165228158-19ff6e18-e716-4e05-90af-02b1fe644745.gif)
-
-
-----
-
 ### Installation
 
 First cd into the repo directory aftering cloning or downloading, and run `pip install .` which will run `setup.py` and install necessary dependencies along with the `fcpx-marker-tool` package.
@@ -25,7 +20,9 @@ Then run the module directly using `Python -m fcpx_marker_tool`
 
 ### Demo
 
-Full demo for version 2.0.0 coming soon.
+https://user-images.githubusercontent.com/69938486/172484701-ef0404ae-5c49-4d5a-bcdc-8e336846d4b5.mp4
+
+
 
 ---
 
