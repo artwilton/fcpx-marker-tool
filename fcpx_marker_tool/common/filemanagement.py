@@ -77,11 +77,26 @@ class OutputFormatting:
         fractional_timecode = self.item.timecode_info.start.as_fractional_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
         return f"{self.item.name} - {fractional_timecode}"
 
+    def standard_timecode(self):
+        timecode = self.item.timecode_info.start.as_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
+        return timecode
+
+    def fractional_timecode(self):
+        timecode = self.item.timecode_info.start.as_fractional_timecode(self.frame_rate, self.item.timecode_info.non_drop_frame)
+        return timecode
+
+    def hr_min_sec_timecode(self):
+        timecode = self.item.timecode_info.start.as_hr_min_sec(self.frame_rate, self.item.timecode_info.non_drop_frame)
+        return timecode
+
     FORMATTING_OPTIONS = {
     "Youtube": youtube,
     "DVD Studio Pro": dvd_studio_pro,
     "Marker Name - Frames": name_frames,
-    "Marker Name - Fractional Timecode": name_fractional_timecode
+    "Marker Name - Fractional Timecode": name_fractional_timecode,
+    "Standard Timecode (HH:MM:SS:FF)": standard_timecode,
+    "Fractional Timecode (HH:MM:SS.MS)": fractional_timecode,
+    "Hours, Minutes, Seconds (HH:MM:SS)": hr_min_sec_timecode
     }
 
     def set_formatting(self, formatting_option):
